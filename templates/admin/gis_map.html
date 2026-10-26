@@ -1,0 +1,116 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Smart City GIS Map - WasteAI Control Portal{% endblock %}
+{% block page_title %}Smart City GIS Surveillance Map (GPS Camera Pins){% endblock %}
+
+{% block extra_css %}
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    .gis-map-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+
+    #cityMap {
+        height: 520px;
+        width: 100%;
+        background: #0f172a;
+    }
+
+    .leaflet-popup-content-wrapper {
+        background: #1e293b !important;
+        color: #fff !important;
+        border-radius: 10px !important;
+        border: 1px solid #334155;
+    }
+
+    .leaflet-popup-tip {
+        background: #1e293b !important;
+    }
+
+    .map-cam-popup img {
+        width: 100%;
+        border-radius: 6px;
+        margin-top: 6px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="gis-map-card">
+    <div class="card-header" style="padding:16px 20px; margin-bottom:0;">
+        <div class="card-title">
+            <i class="fa-solid fa-map-location-dot" style="color:var(--primary);"></i>
+            <span>Campus & Smart City Geographic Information System (GIS)</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <span style="font-size:12px; color:var(--text-muted);"><i class="fa-solid fa-satellite"></i> GPS Coordinates: 18.7766° N, 84.0935° E</span>
+            <span class="badge-pill" style="background:rgba(16,185,129,0.15); color:#34d399;">4 Nodes Mapped</span>
+        </div>
+    </div>
+
+    <div id="cityMap"></div>
+
+    <div style="padding:14px 20px; background:rgba(15,23,42,0.8); border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted); flex-wrap:wrap; gap:10px;">
+        <div style="display:flex; gap:18px;">
+            <span><i class="fa-solid fa-location-dot" style="color:#10b981;"></i> <b>Green:</b> Active Clean Receptacle</span>
+            <span><i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> <b>Red:</b> Active Violation Hotspot</span>
+            <span><i class="fa-solid fa-location-dot" style="color:#3b82f6;"></i> <b>Blue:</b> Patrol Standby Camera</span>
+        </div>
+        <span>Click on any map pin to inspect live stream and incident metrics.</span>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize Leaflet Map centered on Paralakhemundi facility
+    const map = L.map('cityMap').setView([18.7766, 84.0935], 16);
+
+    // Dark-themed tiles from CartoDB
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+        maxZoom: 19
+    }).addTo(map);
+
+    // Custom Map Markers
+    const cameras = [
+        { id: "CAM-01", name: "Primary Waste Surveillance AI", lat: 18.7766, lng: 84.0935, status: "ACTIVE_AI", violations: 1, img: "/video_feed" },
+        { id: "CAM-02", name: "Food Court & Canteen Receptacle", lat: 18.7778, lng: 84.0948, status: "STANDBY", violations: 0, img: "/static/results/crop_black_plastic.jpg" },
+        { id: "CAM-03", name: "East Wing Corridor Bin", lat: 18.7755, lng: 84.0920, status: "STANDBY", violations: 0, img: "/static/results/crop_black_plastic.jpg" },
+        { id: "CAM-04", name: "Campus Perimeter Gate", lat: 18.7785, lng: 84.0915, status: "STANDBY", violations: 0, img: "/static/results/crop_black_plastic.jpg" }
+    ];
+
+    cameras.forEach(cam => {
+        const marker = L.circleMarker([cam.lat, cam.lng], {
+            radius: 10,
+            fillColor: cam.violations > 0 ? '#ef4444' : '#10b981',
+            color: '#fff',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.9
+        }).addTo(map);
+
+        const popupContent = `
+            <div class="map-cam-popup" style="width:200px;">
+                <b style="color:#fff; font-size:13px;">${cam.id}: ${cam.name}</b><br>
+                <span style="font-size:11px; color:#94a3b8;">Status: ${cam.status}</span><br>
+                <span style="font-size:11px; color:${cam.violations > 0 ? '#f87171' : '#34d399'}; font-weight:700;">
+                    ${cam.violations > 0 ? '🚨 1 Violation Recorded' : '✓ Normal Clean Zone'}
+                </span>
+                <img src="${cam.img}" alt="Preview">
+            </div>
+        `;
+        marker.bindPopup(popupContent);
+    });
+</script>
+{% endblock %}
+

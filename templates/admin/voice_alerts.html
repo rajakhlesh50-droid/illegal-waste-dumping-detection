@@ -1,0 +1,239 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Voice Speaker Warnings - WasteAI Control Portal{% endblock %}
+{% block page_title %}Automated AI Voice Speaker Announcement System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .voice-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+    @media (max-width: 1050px) {
+        .voice-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-group-admin {
+        margin-bottom: 20px;
+    }
+
+    .form-label-admin {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #cbd5e1;
+        margin-bottom: 8px;
+    }
+
+    .form-input-admin {
+        width: 100%;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 10px 14px;
+        color: #fff;
+        font-size: 14px;
+    }
+
+    .switch-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        background: #1e293b;
+        border-radius: 10px;
+        border: 1px solid #334155;
+        margin-bottom: 18px;
+    }
+
+    .audio-test-card {
+        background: #0d1322;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .speaker-wave-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: rgba(16, 185, 129, 0.15);
+        color: #10b981;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="voice-grid">
+
+    <!-- VOICE CONFIGURATION -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-bullhorn" style="color:var(--primary);"></i>
+                <span>Speaker Announcement Configuration</span>
+            </div>
+            <span class="badge-pill" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
+                Web Speech AI
+            </span>
+        </div>
+
+        <form action="{{ url_for('admin_voice_alerts') }}" method="POST">
+            <input type="hidden" name="action" value="save_voice_settings">
+
+            <div class="switch-toggle-row">
+                <div>
+                    <h4 style="font-size:14px; font-weight:700; color:#fff; margin-bottom:2px;">Enable Automated Voice Warnings</h4>
+                    <p style="font-size:12px; color:var(--text-muted);">Speak warning loudly through camera speakers when illegal dumping is detected</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="voice_enabled" value="1" {% if voice_enabled %}checked{% endif %}>
+                    <span class="slider-round"></span>
+                </label>
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin">Primary Warning Language</label>
+                <select name="voice_language" id="voiceLang" class="form-input-admin" onchange="updateWarningText(this.value)">
+                    <option value="hi" {% if voice_language == 'hi' %}selected{% endif %}>Hindi (हिंदी) - "कृपया कचरा डस्टबिन में डालें!"</option>
+                    <option value="en" {% if voice_language == 'en' %}selected{% endif %}>English - "Warning! Please dispose waste inside dustbin."</option>
+                    <option value="both" {% if voice_language == 'both' %}selected{% endif %}>Bilingual (Hindi + English Dual Announcement)</option>
+                </select>
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin">Custom Hindi Announcement Message</label>
+                <input 
+                    type="text" 
+                    id="hindiMsg" 
+                    name="hindi_message" 
+                    class="form-input-admin" 
+                    value="{{ hindi_message or 'कृपया कचरा डस्टबिन में डालें! बाहर कचरा फेंकना सख्त मना है।' }}"
+                >
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin">Custom English Announcement Message</label>
+                <input 
+                    type="text" 
+                    id="englishMsg" 
+                    name="english_message" 
+                    class="form-input-admin" 
+                    value="{{ english_message or 'Warning! Please dispose waste inside the dustbin. Littering is strictly prohibited.' }}"
+                >
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin">Announcement Volume</label>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <input type="range" id="voiceVol" name="voice_volume" class="range-slider" min="0.2" max="1.0" step="0.1" value="1.0">
+                    <span class="slider-value-badge">100%</span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary-action" style="width:100%; margin-top:10px;">
+                <i class="fa-solid fa-floppy-disk"></i> Save Voice Announcement Settings
+            </button>
+        </form>
+    </div>
+
+    <!-- AUDIO TEST & PLAY -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+        <div class="card" style="margin-bottom:0;">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-volume-high"></i>
+                    <span>Test Audio Voice Output</span>
+                </div>
+            </div>
+
+            <div class="audio-test-card">
+                <div class="speaker-wave-icon" id="speakerIcon">
+                    <i class="fa-solid fa-volume-high"></i>
+                </div>
+
+                <div>
+                    <h3 style="color:#fff; font-size:16px; margin-bottom:4px;">Test Live Audio Speaker</h3>
+                    <p style="color:var(--text-muted); font-size:12px;">Listen to how offenders will hear the warning through PC/Camera speakers.</p>
+                </div>
+
+                <div style="display:flex; gap:10px; width:100%;">
+                    <button class="feed-btn" onclick="testVoiceSpeak('hi')" style="flex:1; justify-content:center; color:#34d399; border-color:#059669;">
+                        <i class="fa-solid fa-play"></i> Test Hindi
+                    </button>
+                    <button class="feed-btn" onclick="testVoiceSpeak('en')" style="flex:1; justify-content:center; color:#60a5fa; border-color:#2563eb;">
+                        <i class="fa-solid fa-play"></i> Test English
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:0;">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Integration With Live Camera</span>
+                </div>
+            </div>
+            <p style="font-size:13px; color:#cbd5e1; line-height:1.6;">
+                When active, the public camera feed (<code>/</code> and <code>/camera</code>) automatically triggers this voice announcement whenever a new illegal dumping event occurs.
+            </p>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function testVoiceSpeak(lang) {
+        if (!('speechSynthesis' in window)) {
+            alert("Speech synthesis is not supported in this browser.");
+            return;
+        }
+
+        window.speechSynthesis.cancel();
+        let text = "";
+        let speechLang = "hi-IN";
+
+        if (lang === 'hi') {
+            text = document.getElementById("hindiMsg").value;
+            speechLang = "hi-IN";
+        } else {
+            text = document.getElementById("englishMsg").value;
+            speechLang = "en-US";
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = speechLang;
+        utterance.rate = 0.95;
+        utterance.volume = parseFloat(document.getElementById("voiceVol").value || 1.0);
+
+        const icon = document.getElementById("speakerIcon");
+        icon.style.transform = "scale(1.15)";
+        utterance.onend = () => {
+            icon.style.transform = "scale(1)";
+        };
+
+        window.speechSynthesis.speak(utterance);
+    }
+</script>
+{% endblock %}
+

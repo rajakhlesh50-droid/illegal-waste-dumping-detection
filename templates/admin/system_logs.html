@@ -1,0 +1,223 @@
+{% extends "admin/base.html" %}
+
+{% block title %}System Logs & DB Diagnostics - WasteAI Control Portal{% endblock %}
+{% block page_title %}System Diagnostics, Terminal Logs & Database Control{% endblock %}
+
+{% block extra_css %}
+<style>
+    .logs-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+    @media (max-width: 1050px) {
+        .logs-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* TERMINAL CONSOLE */
+    .terminal-window {
+        background: #050811;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .terminal-topbar {
+        background: #0d1322;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .terminal-dots {
+        display: flex;
+        gap: 6px;
+    }
+
+    .t-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .t-dot.red { background: #ef4444; }
+    .t-dot.yellow { background: #f59e0b; }
+    .t-dot.green { background: #10b981; }
+
+    .terminal-content {
+        padding: 16px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: #38bdf8;
+        line-height: 1.6;
+        height: 380px;
+        overflow-y: auto;
+        background: #030712;
+    }
+
+    .log-line {
+        margin-bottom: 4px;
+        word-break: break-all;
+    }
+
+    .log-timestamp {
+        color: #64748b;
+    }
+
+    .log-info { color: #38bdf8; }
+    .log-success { color: #34d399; }
+    .log-warn { color: #fbbf24; }
+    .log-error { color: #f87171; }
+
+    .db-metric-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(31, 41, 61, 0.7);
+        font-size: 13px;
+    }
+
+    .db-metric-row:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="logs-grid">
+
+    <!-- DATABASE & STORAGE METRICS -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-database"></i>
+                <span>Database & File Storage</span>
+            </div>
+            <span class="badge-pill" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);">
+                SQLite 3
+            </span>
+        </div>
+
+        <div style="margin-bottom:20px;">
+            <div class="db-metric-row">
+                <span style="color:var(--text-muted);"><i class="fa-solid fa-folder"></i> Database File</span>
+                <span style="color:#e2e8f0; font-family:'JetBrains Mono'; font-size:12px;">database/waste_detection.db</span>
+            </div>
+
+            <div class="db-metric-row">
+                <span style="color:var(--text-muted);"><i class="fa-solid fa-weight-scale"></i> Database Size</span>
+                <span style="color:#38bdf8; font-weight:700; font-family:'JetBrains Mono';">{{ db_size_kb }} KB</span>
+            </div>
+
+            <div class="db-metric-row">
+                <span style="color:var(--text-muted);"><i class="fa-solid fa-list-check"></i> Total Audit Records</span>
+                <span style="color:#fff; font-weight:700; font-family:'JetBrains Mono';">{{ total_detections }} rows</span>
+            </div>
+
+            <div class="db-metric-row">
+                <span style="color:var(--text-muted);"><i class="fa-solid fa-triangle-exclamation"></i> Illegal Dumping Records</span>
+                <span style="color:#f87171; font-weight:700; font-family:'JetBrains Mono';">{{ illegal_count }} rows</span>
+            </div>
+
+            <div class="db-metric-row">
+                <span style="color:var(--text-muted);"><i class="fa-solid fa-images"></i> Saved Evidence Snapshots</span>
+                <span style="color:#34d399; font-weight:700; font-family:'JetBrains Mono';">{{ evidence_files_count }} files ({{ evidence_dir_size_mb }} MB)</span>
+            </div>
+        </div>
+
+        <!-- MAINTENANCE BUTTONS -->
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; gap:10px;">
+                <a href="{{ url_for('admin_export_db') }}" class="btn-primary-action" style="flex:1; justify-content:center;">
+                    <i class="fa-solid fa-download"></i> Download .DB Backup
+                </a>
+                <a href="{{ url_for('export_history_csv') }}" class="btn-portal" style="flex:1; justify-content:center;">
+                    <i class="fa-solid fa-file-csv"></i> Export CSV Log
+                </a>
+            </div>
+
+            <form action="{{ url_for('admin_clear_logs') }}" method="POST" onsubmit="return confirm('WARNING: Are you sure you want to clear all detection records? This cannot be undone.');" style="margin-top:6px;">
+                <button type="submit" class="feed-btn danger" style="width:100%; justify-content:center;">
+                    <i class="fa-solid fa-trash-can"></i> Clear All Audit Database Records
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- LIVE SYSTEM LOG CONSOLE -->
+    <div class="terminal-window">
+        <div class="terminal-topbar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div class="terminal-dots">
+                    <span class="t-dot red"></span>
+                    <span class="t-dot yellow"></span>
+                    <span class="t-dot green"></span>
+                </div>
+                <span style="font-size:12px; font-weight:700; color:#e2e8f0; font-family:'JetBrains Mono';">system_diagnostics.log</span>
+            </div>
+            <div>
+                <button class="btn-action-sm" onclick="clearTerminalView()" style="font-size:11px; padding:3px 8px;">
+                    Clear View
+                </button>
+            </div>
+        </div>
+
+        <div class="terminal-content" id="terminalOutput">
+            <div class="log-line">
+                <span class="log-timestamp">[{{ server_time }}]</span>
+                <span class="log-success">[INFO]</span> WasteAI Core Engine Initialized.
+            </div>
+            <div class="log-line">
+                <span class="log-timestamp">[{{ server_time }}]</span>
+                <span class="log-info">[MODEL]</span> Waste Model: YOLOv8 / YOLO11 loaded successfully.
+            </div>
+            <div class="log-line">
+                <span class="log-timestamp">[{{ server_time }}]</span>
+                <span class="log-info">[CAMERA]</span> Stream Mode: {{ camera_mode }} | Camera ID: CAM-01.
+            </div>
+            <div class="log-line">
+                <span class="log-timestamp">[{{ server_time }}]</span>
+                <span class="log-success">[RECEPTACLE]</span> Dual-spectrum pedal dustbin detector active.
+            </div>
+            <div class="log-line">
+                <span class="log-timestamp">[{{ server_time }}]</span>
+                <span class="log-warn">[SECURITY]</span> Evidence audit capture active (static/results/).
+            </div>
+            {% for log in recent_logs %}
+            <div class="log-line">
+                <span class="log-timestamp">[{{ log.time }}]</span>
+                <span class="log-info">[{{ log.tag }}]</span> {{ log.msg }}
+            </div>
+            {% endfor %}
+            <div class="log-line" style="color:#64748b;">
+                &gt; Listening for live frame events and detections...
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function clearTerminalView() {
+        document.getElementById("terminalOutput").innerHTML = '<div class="log-line" style="color:#64748b;">Terminal output cleared. Waiting for new events...</div>';
+    }
+
+    // Auto-scroll terminal
+    const term = document.getElementById("terminalOutput");
+    term.scrollTop = term.scrollHeight;
+</script>
+{% endblock %}
+

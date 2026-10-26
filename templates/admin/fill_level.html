@@ -1,0 +1,230 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dustbin Fill Level & Overflow - WasteAI Control Portal{% endblock %}
+{% block page_title %}Smart Dustbin Fill-Level & Overflow Monitoring{% endblock %}
+
+{% block extra_css %}
+<style>
+    .fill-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+    @media (max-width: 1050px) {
+        .fill-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* VISUAL DUSTBIN TANK */
+    .bin-tank-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 30px;
+        padding: 30px;
+        background: #0d1322;
+        border-radius: 14px;
+        border: 1px solid var(--border-color);
+    }
+
+    .tank-outer {
+        width: 130px;
+        height: 220px;
+        border: 4px solid #334155;
+        border-top: none;
+        border-radius: 0 0 20px 20px;
+        position: relative;
+        background: rgba(15, 23, 42, 0.8);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column-reverse;
+    }
+
+    .tank-lid {
+        width: 150px;
+        height: 14px;
+        background: #475569;
+        border-radius: 8px 8px 0 0;
+        position: absolute;
+        top: -18px;
+        left: -14px;
+    }
+
+    .tank-fill {
+        width: 100%;
+        transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 0 0 16px 16px;
+        position: relative;
+    }
+
+    .fill-emerald {
+        background: linear-gradient(180deg, #34d399, #059669);
+        box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+    }
+
+    .fill-amber {
+        background: linear-gradient(180deg, #fbbf24, #d97706);
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.4);
+    }
+
+    .fill-rose {
+        background: linear-gradient(180deg, #f87171, #dc2626);
+        box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
+        animation: overflow-glow 1.5s infinite alternate;
+    }
+
+    @keyframes overflow-glow {
+        from { opacity: 0.85; }
+        to { opacity: 1; }
+    }
+
+    .tank-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .stat-number {
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 700;
+        width: fit-content;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="fill-grid">
+
+    <!-- REAL-TIME GAUGE -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-trash-can-arrow-up" style="color:var(--primary);"></i>
+                <span>Live Dustbin Capacity & Fill Level</span>
+            </div>
+            <span class="badge-pill" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
+                BIN-01
+            </span>
+        </div>
+
+        <div class="bin-tank-container">
+            <div class="tank-outer">
+                <div class="tank-lid"></div>
+                <div 
+                    class="tank-fill {% if fill_percent > 85 %}fill-rose{% elif fill_percent > 60 %}fill-amber{% else %}fill-emerald{% endif %}" 
+                    style="height: {{ fill_percent }}%;"
+                ></div>
+            </div>
+
+            <div class="tank-stats">
+                <div class="stat-number" style="color:{% if fill_percent > 85 %}#f87171{% elif fill_percent > 60 %}#fbbf24{% else %}#34d399{% endif %};">
+                    {{ fill_percent }}%
+                </div>
+                
+                {% if fill_percent > 85 %}
+                <div class="status-chip" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4);">
+                    <i class="fa-solid fa-triangle-exclamation"></i> OVERFLOW CRITICAL
+                </div>
+                {% elif fill_percent > 60 %}
+                <div class="status-chip" style="background:rgba(245,158,11,0.2); color:#fbbf24; border:1px solid rgba(245,158,11,0.4);">
+                    <i class="fa-solid fa-circle-exclamation"></i> FILLING FAST (HIGH)
+                </div>
+                {% else %}
+                <div class="status-chip" style="background:rgba(16,185,129,0.2); color:#34d399; border:1px solid rgba(16,185,129,0.4);">
+                    <i class="fa-solid fa-circle-check"></i> NORMAL CAPACITY
+                </div>
+                {% endif %}
+
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                    <i class="fa-solid fa-clock"></i> Last Emptied: <b>{{ last_emptied }}</b>
+                </div>
+
+                <form action="{{ url_for('admin_reset_dustbin_fill') }}" method="POST" style="margin-top:10px;">
+                    <button type="submit" class="feed-btn" style="background:#1e293b; color:#38bdf8; border-color:#0284c7;">
+                        <i class="fa-solid fa-broom"></i> Mark As Emptied
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div style="margin-top:20px; display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:13px;">
+            <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155;">
+                <span style="color:var(--text-muted); display:block; font-size:11px;">RECEPTACLE TYPE</span>
+                <b style="color:#fff;">Pedal Bucket (Dual HSV)</b>
+            </div>
+            <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155;">
+                <span style="color:var(--text-muted); display:block; font-size:11px;">ESTIMATED DISPOSALS</span>
+                <b style="color:#38bdf8;">{{ legal_count }} Items Inside</b>
+            </div>
+        </div>
+    </div>
+
+    <!-- THRESHOLD RULES & NOTIFICATION TRIGGERS -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-bell"></i>
+                <span>Overflow Alert Thresholds</span>
+            </div>
+        </div>
+
+        <form action="{{ url_for('admin_fill_level') }}" method="POST">
+            <input type="hidden" name="action" value="save_thresholds">
+
+            <div class="form-group-admin">
+                <label class="form-label-admin">Warning Threshold (Send Early Alert)</label>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="range" class="range-slider" min="50" max="85" value="{{ warn_threshold }}" oninput="document.getElementById('warnVal').textContent = this.value + '%'">
+                    <span class="slider-value-badge" id="warnVal">{{ warn_threshold }}%</span>
+                </div>
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin">Critical Overflow Threshold (Urgent Emptying)</label>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input type="range" class="range-slider" min="80" max="98" value="{{ crit_threshold }}" oninput="document.getElementById('critVal').textContent = this.value + '%'">
+                    <span class="slider-value-badge" id="critVal" style="color:#f87171;">{{ crit_threshold }}%</span>
+                </div>
+            </div>
+
+            <div class="switch-toggle-row">
+                <div>
+                    <h4 style="font-size:13px; font-weight:700; color:#fff; margin-bottom:2px;">Auto-Notify Sanitation Team</h4>
+                    <p style="font-size:11px; color:var(--text-muted);">Send Telegram / Sound siren when dustbin reaches Overflow state</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="auto_notify" value="1" checked>
+                    <span class="slider-round"></span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn-primary-action" style="width:100%;">
+                <i class="fa-solid fa-floppy-disk"></i> Save Capacity Rules
+            </button>
+        </form>
+
+        <div style="margin-top:24px; padding:16px; background:#0f172a; border-radius:10px; border:1px solid #1e293b; font-size:12px; color:#94a3b8; line-height:1.6;">
+            <i class="fa-solid fa-lightbulb" style="color:#fbbf24;"></i> <b>How Fill-Level is calculated:</b> The system monitors consecutive successful legal waste disposals into the bucket, tracked volume pixel occupancy inside the bounding rectangle, and alerts sanitation teams before litter spills onto the floor.
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+

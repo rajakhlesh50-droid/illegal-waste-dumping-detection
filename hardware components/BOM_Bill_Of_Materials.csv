@@ -1,0 +1,18 @@
+Item_No,Component_Name,Part_Model,Quantity,Primary_Function,Operating_Voltage,Interface,Est_Price_INR
+1,ESP32 Wi-Fi & BLE Microcontroller,ESP32-WROOM-32 DevKit V1 (30-pin),1,Main IoT Node & Server Sync,3.3V-5V DC,GPIO / I2C / UART / Wi-Fi,420
+2,Ultrasonic Fill-Level Distance Sensor,HC-SR04,1,Bin Waste Fill Percentage,5V DC,GPIO Trigger/Echo,140
+3,Digital Weight Sensor Kit,10kg Load Cell + HX711 24-bit ADC,1,Waste Accumulation Weight,5V DC,2-Wire Serial (DT/SCK),260
+4,Air Quality & Hazardous Gas Sensor,MQ-135 Sensor Module,1,Odor & Toxic Ammonia/Methane,5V DC,Analog Output (A0),150
+5,Infrared Touchless Proximity Sensor,TCRT5000 IR Sensor Module,1,Hand Approach Detection for Lid,3.3V-5V DC,Digital Output (D0),75
+6,Metal Gear Servo Motor,TowerPro MG995 (180 deg),1,Automatic Hands-Free Bin Lid,4.8V-6V DC,PWM Signal,280
+7,High-Decibel Active Alarm Buzzer,5V Continuous Active Buzzer (85dB),1,Illegal Dumping Alarm,3.3V-5V DC,Digital Output (High/Low),30
+8,Voice Alert MP3 Player & Speaker,DFPlayer Mini + 3W 8 Ohm Speaker,1,Hindi/English Audio Broadcasts,3.3V-5V DC,UART Serial (TX/RX),180
+9,Graphic I2C OLED Display,0.96 inch SSD1306 (128x64),1,Local Display of Fill % & Health,3.3V-5V DC,I2C (SDA/SCL),210
+10,Addressable RGB Status LED Ring,WS2812B NeoPixel 8-bit Ring,1,Visual Tri-Color Status Indicator,5V DC,1-Wire Digital Data,120
+11,Wide-Angle AI Surveillance Camera,1080p Full HD USB Camera (120 deg FOV),1,AI Vision & Dumping Tracking,5V DC,USB 2.0 / RTSP,1150
+12,DC-DC Step-Down Buck Converter,LM2596 3A Adjustable Module,1,Step 12V to 5V 3A for Servos,4V-35V In,Screw Terminals,85
+13,DC Power Supply Adapter,12V 2A Regulated SMPS Adapter,1,Mains Power Supply (240V AC),12V 2A DC,DC Barrel Jack (5.5x2.1mm),220
+14,Rechargeable Li-ion Battery Pack,2x 18650 (3.7V 2600mAh) + 2S BMS,1,Power Backup for Outages,7.4V-8.4V DC,Battery Terminals,420
+15,Weatherproof Electrical Box,IP65 ABS Waterproof Junction Box,1,Protects Electronics & Sensors,N/A,Enclosure,280
+16,Jumper Wires & Hardware Mounting,Breadboard / Jumper Wires / Standoffs,1 Set,Wiring and Component Mounting,N/A,Dupont Connectors,150
+

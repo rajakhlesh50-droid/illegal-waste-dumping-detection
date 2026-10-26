@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}WasteAI Admin Panel{% endblock %}</title>
+    <!-- PWA Web App Manifest & Mobile Meta -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#10b981">
+    <link rel="icon" type="image/png" sizes="96x96" href="/static/icons/icon-96.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/static/icons/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="WasteAI">
+    <!-- Google Fonts & FontAwesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Analytics and Model Accuracy -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --bg-card: #111827;
+            --bg-card-hover: #1f2937;
+            --bg-sidebar: #0d1322;
+            --border-color: #1f293d;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.25);
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --purple: #8b5cf6;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+        }
+
+        /* SIDEBAR */
+        aside.admin-sidebar {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #059669, #10b981);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        .brand-text h2 {
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            color: #ffffff;
+        }
+
+        .brand-text span {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--primary);
+            letter-spacing: 0.8px;
+        }
+
+        .sidebar-menu {
+            padding: 20px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .menu-category {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #6b7280;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            padding: 12px 10px 4px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item i {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .nav-item:hover {
+            color: #ffffff;
+            background-color: var(--bg-card-hover);
+        }
+
+        .nav-item:hover i {
+            transform: scale(1.1);
+        }
+
+        .nav-item.active {
+            color: #ffffff;
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.15), transparent);
+            border-left: 3px solid var(--primary);
+            font-weight: 600;
+        }
+
+        .nav-item.active i {
+            color: var(--primary);
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .sidebar-footer {
+            padding: 18px;
+            border-top: 1px solid var(--border-color);
+            background: rgba(13, 19, 34, 0.6);
+        }
+
+        .admin-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .admin-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #1e293b;
+            border: 2px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .admin-info {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .admin-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .admin-role {
+            font-size: 11px;
+            color: #10b981;
+        }
+
+        .logout-btn {
+            background: transparent;
+            border: none;
+            color: #9ca3af;
+            font-size: 15px;
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .logout-btn:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* MAIN CONTENT */
+        main.admin-main {
+            margin-left: 260px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            width: calc(100% - 260px);
+        }
+
+        /* TOPBAR */
+        header.admin-topbar {
+            height: 68px;
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .topbar-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-title h1 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .live-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .pulse-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+            animation: pulse-animation 1.5s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .btn-portal {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #1f2937;
+            color: #d1d5db;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+
+        .btn-portal:hover {
+            background: #374151;
+            color: #fff;
+            border-color: #4b5563;
+        }
+
+        .btn-primary-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-primary-action:hover {
+            background: linear-gradient(135deg, #047857, #059669);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+            transform: translateY(-1px);
+        }
+
+        /* PAGE BODY */
+        .admin-content-area {
+            padding: 28px;
+            flex: 1;
+        }
+
+        /* FLASH MESSAGES */
+        .flash-container {
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .flash-alert {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .flash-success {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+        }
+
+        .flash-error {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .flash-info {
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+        }
+
+        /* CARDS & UI COMPONENTS */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 22px;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title i {
+            color: var(--primary);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 900px) {
+            aside.admin-sidebar {
+                width: 70px;
+            }
+            .sidebar-brand .brand-text, .nav-item span, .menu-category, .admin-info, .nav-badge {
+                display: none;
+            }
+            .sidebar-brand {
+                padding: 16px 10px;
+                justify-content: center;
+            }
+            .nav-item {
+                justify-content: center;
+                padding: 14px 0;
+            }
+            main.admin-main {
+                margin-left: 70px;
+                width: calc(100% - 70px);
+            }
+        }
+    </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#10b981">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <!-- ADMIN SIDEBAR -->
+    <aside class="admin-sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="brand-text">
+                <h2>WasteAI Admin</h2>
+                <span>Control Portal</span>
+            </div>
+        </div>
+
+        <div class="sidebar-menu">
+            <div class="menu-category">Main Operations</div>
+            
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a href="{{ url_for('admin_cameras') }}" class="nav-item {% if active_page == 'cameras' %}active{% endif %}">
+                <i class="fa-solid fa-video"></i>
+                <span>Camera Manager</span>
+            </a>
+
+            <a href="{{ url_for('admin_multi_camera') }}" class="nav-item {% if active_page == 'multi_camera' %}active{% endif %}">
+                <i class="fa-solid fa-table-cells"></i>
+                <span>Multi-Camera CCTV</span>
+            </a>
+
+            <a href="{{ url_for('admin_incidents') }}" class="nav-item {% if active_page == 'incidents' %}active{% endif %}">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Incident Gallery</span>
+                {% if alert_count is defined and alert_count > 0 %}
+                <span class="nav-badge">{{ alert_count }}</span>
+                {% endif %}
+            </a>
+
+            <a href="{{ url_for('admin_offenders') }}" class="nav-item {% if active_page == 'offenders' %}active{% endif %}">
+                <i class="fa-solid fa-user-ninja"></i>
+                <span>Repeat Offenders</span>
+            </a>
+
+            <a href="{{ url_for('admin_challan') }}" class="nav-item {% if active_page == 'challan' %}active{% endif %}">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+                <span>E-Challan Generator</span>
+            </a>
+
+            <a href="{{ url_for('admin_workers') }}" class="nav-item {% if active_page == 'workers' %}active{% endif %}">
+                <i class="fa-solid fa-broom"></i>
+                <span>Sanitation Dispatch</span>
+            </a>
+
+            <div class="menu-category">Smart AI & City GIS</div>
+
+            <a href="{{ url_for('admin_fill_level') }}" class="nav-item {% if active_page == 'fill_level' %}active{% endif %}">
+                <i class="fa-solid fa-trash-can-arrow-up"></i>
+                <span>Fill Level & Overflow</span>
+            </a>
+
+            <a href="{{ url_for('admin_night_vision') }}" class="nav-item {% if active_page == 'night_vision' %}active{% endif %}">
+                <i class="fa-solid fa-moon"></i>
+                <span>Night Vision AI</span>
+            </a>
+
+            <a href="{{ url_for('admin_segregation') }}" class="nav-item {% if active_page == 'segregation' %}active{% endif %}">
+                <i class="fa-solid fa-recycle"></i>
+                <span>Wet vs Dry Segregation</span>
+            </a>
+
+            <a href="{{ url_for('admin_gis_map') }}" class="nav-item {% if active_page == 'gis_map' %}active{% endif %}">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>Smart City GIS Map</span>
+            </a>
+
+            <a href="{{ url_for('admin_analytics') }}" class="nav-item {% if active_page == 'analytics' %}active{% endif %}">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Analytics & Heatmap</span>
+            </a>
+
+            <div class="menu-category">Alerts & AI Assistant</div>
+
+            <a href="{{ url_for('admin_chatbot') }}" class="nav-item {% if active_page == 'chatbot' %}active{% endif %}">
+                <i class="fa-solid fa-robot"></i>
+                <span>AI Assistant Bot</span>
+            </a>
+
+            <a href="{{ url_for('admin_notifications') }}" class="nav-item {% if active_page == 'notifications' %}active{% endif %}">
+                <i class="fa-brands fa-telegram"></i>
+                <span>Telegram & Alerts</span>
+            </a>
+
+            <a href="{{ url_for('admin_voice_alerts') }}" class="nav-item {% if active_page == 'voice_alerts' %}active{% endif %}">
+                <i class="fa-solid fa-bullhorn"></i>
+                <span>Voice Speaker Warning</span>
+            </a>
+
+            <div class="menu-category">Configuration & System</div>
+
+            <a href="{{ url_for('admin_settings') }}" class="nav-item {% if active_page == 'settings' %}active{% endif %}">
+                <i class="fa-solid fa-sliders"></i>
+                <span>AI & Settings</span>
+            </a>
+
+            <a href="{{ url_for('admin_pwa') }}" class="nav-item {% if active_page == 'pwa' %}active{% endif %}">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+                <span>Mobile App (PWA)</span>
+            </a>
+
+            <a href="{{ url_for('admin_logs') }}" class="nav-item {% if active_page == 'logs' %}active{% endif %}">
+                <i class="fa-solid fa-terminal"></i>
+                <span>System Logs & DB</span>
+            </a>
+
+            <div class="menu-category">Public Views</div>
+
+            <a href="{{ url_for('index') }}" class="nav-item" target="_blank">
+                <i class="fa-solid fa-desktop"></i>
+                <span>Live Dashboard <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 11px; margin-left: 4px;"></i></span>
+            </a>
+
+            <a href="{{ url_for('history') }}" class="nav-item" target="_blank">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                <span>History Audit <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 11px; margin-left: 4px;"></i></span>
+            </a>
+        </div>
+
+        <div class="sidebar-footer">
+            <div class="admin-profile">
+                <div class="admin-avatar">
+                    <i class="fa-solid fa-user-gear"></i>
+                </div>
+                <div class="admin-info">
+                    <div class="admin-name">{{ session.get('admin_user', 'System Admin') }}</div>
+                    <div class="admin-role">Super Administrator</div>
+                </div>
+                <a href="{{ url_for('admin_logout') }}" class="logout-btn" title="Sign Out">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ADMIN MAIN AREA -->
+    <main class="admin-main">
+        <!-- TOPBAR -->
+        <header class="admin-topbar">
+            <div class="topbar-title">
+                <h1>{% block page_title %}Admin Control Center{% endblock %}</h1>
+                <div class="live-status-pill">
+                    <span class="pulse-dot"></span>
+                    <span>AI Engine Online</span>
+                </div>
+            </div>
+
+            <div class="topbar-actions">
+                <a href="{{ url_for('index') }}" class="btn-portal" title="Open live public camera view" target="_blank">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>Public Feed</span>
+                </a>
+                <button class="btn-primary-action" onclick="refreshAdminData()">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- CONTENT AREA -->
+        <div class="admin-content-area">
+            <!-- FLASH MESSAGES -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-container">
+                    {% for category, message in messages %}
+                    <div class="flash-alert flash-{{ category }}">
+                        <span><i class="fa-solid fa-circle-info"></i> {{ message }}</span>
+                        <button onclick="this.parentElement.remove()" style="background:transparent; border:none; color:inherit; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+        function refreshAdminData() {
+            window.location.reload();
+        }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('PWA ServiceWorker registered:', reg.scope))
+                    .catch(err => console.log('PWA ServiceWorker error:', err));
+            });
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+

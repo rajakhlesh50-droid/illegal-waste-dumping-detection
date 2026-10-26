@@ -1,0 +1,277 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Analytics & Spatial Heatmap - WasteAI Control Portal{% endblock %}
+{% block page_title %}Surveillance Analytics, Trends & Spatial Heatmap{% endblock %}
+
+{% block extra_css %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+    }
+
+    @media (max-width: 1050px) {
+        .charts-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .chart-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .chart-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .chart-box {
+        position: relative;
+        height: 250px;
+        width: 100%;
+    }
+
+    /* HEATMAP GRID */
+    .heatmap-container {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(3, 80px);
+        gap: 8px;
+        background: #070a13;
+        padding: 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        margin-top: 14px;
+    }
+
+    .heatmap-zone {
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 700;
+        color: #fff;
+        transition: transform 0.2s;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .heatmap-zone:hover {
+        transform: scale(1.03);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- CHARTS GRID ROW 1 -->
+<div class="charts-grid">
+
+    <!-- HOURLY PEAK DUMPING CHART -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fa-solid fa-clock" style="color:#f59e0b;"></i>
+                <span>Peak Littering Hours (24H Distribution)</span>
+            </div>
+            <span class="badge-pill" style="background:#1e293b; color:#94a3b8;">Today</span>
+        </div>
+        <div class="chart-box">
+            <canvas id="hourlyChart"></canvas>
+        </div>
+    </div>
+
+    <!-- 7-DAY TREND LINE CHART -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fa-solid fa-chart-line" style="color:#10b981;"></i>
+                <span>7-Day Violations Trend</span>
+            </div>
+            <span class="badge-pill" style="background:#1e293b; color:#94a3b8;">Weekly</span>
+        </div>
+        <div class="chart-box">
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- CHARTS GRID ROW 2 -->
+<div class="charts-grid">
+
+    <!-- CATEGORY DISTRIBUTION -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fa-solid fa-chart-pie" style="color:#3b82f6;"></i>
+                <span>Litter Object Categories</span>
+            </div>
+        </div>
+        <div class="chart-box" style="display:flex; justify-content:center;">
+            <canvas id="categoryChart"></canvas>
+        </div>
+    </div>
+
+    <!-- SPATIAL FLOOR HEATMAP -->
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fa-solid fa-fire" style="color:#ef4444;"></i>
+                <span>Camera Spatial Floor Heatmap (High-Risk Zones)</span>
+            </div>
+            <span style="font-size:11px; color:var(--text-muted);">Floor Drop Frequency</span>
+        </div>
+
+        <div class="heatmap-container">
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.2); color:#fca5a5;">
+                Zone A1<br><span style="font-size:9px; color:#94a3b8;">Low (2)</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.4); color:#f87171;">
+                Zone A2<br><span style="font-size:9px; color:#94a3b8;">Med (5)</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.8); color:#fff; border:1px solid #ef4444;">
+                <i class="fa-solid fa-circle-exclamation"></i> Near Bin<br><span style="font-size:9px; color:#fef08a;">CRITICAL (14)</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.15); color:#fca5a5;">
+                Right Wall<br><span style="font-size:9px; color:#94a3b8;">Low (1)</span>
+            </div>
+
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.1); color:#fca5a5;">
+                Door Exit<br><span style="font-size:9px; color:#94a3b8;">(0)</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.6); color:#fff;">
+                Center Floor<br><span style="font-size:9px; color:#fed7aa;">High (9)</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(16, 185, 129, 0.2); color:#34d399; border:1px dashed #10b981;">
+                <i class="fa-solid fa-trash-can"></i> DUSTBIN<br><span style="font-size:9px; color:#a7f3d0;">Legal Safe</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.25); color:#fca5a5;">
+                Corner<br><span style="font-size:9px; color:#94a3b8;">(3)</span>
+            </div>
+
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.1); color:#fca5a5;">
+                Bed Strip<br><span style="font-size:9px; color:#94a3b8;">(0)</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.3); color:#fca5a5;">
+                Left Tile<br><span style="font-size:9px; color:#94a3b8;">(4)</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.35); color:#fca5a5;">
+                Front Bin<br><span style="font-size:9px; color:#94a3b8;">(6)</span>
+            </div>
+            <div class="heatmap-zone" style="background:rgba(239, 68, 68, 0.1); color:#fca5a5;">
+                Perimeter<br><span style="font-size:9px; color:#94a3b8;">(1)</span>
+            </div>
+        </div>
+
+        <div style="margin-top:14px; display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted);">
+            <span><i class="fa-solid fa-circle" style="color:rgba(239,68,68,0.2);"></i> Low Drop Zone</span>
+            <span><i class="fa-solid fa-circle" style="color:rgba(239,68,68,0.8);"></i> Hotspot (Near Dustbin Perimeter)</span>
+            <span><i class="fa-solid fa-circle" style="color:#10b981;"></i> Safe Receptacle</span>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 1. Hourly Chart
+    const ctxHourly = document.getElementById('hourlyChart').getContext('2d');
+    new Chart(ctxHourly, {
+        type: 'bar',
+        data: {
+            labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+            datasets: [{
+                label: 'Illegal Dumping Events',
+                data: [1, 0, 2, 7, 12, 18, 9, 4],
+                backgroundColor: 'rgba(245, 158, 11, 0.65)',
+                borderColor: '#f59e0b',
+                borderWidth: 1,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { grid: { color: '#1f293d' }, ticks: { color: '#94a3b8' } },
+                x: { grid: { color: 'transparent' }, ticks: { color: '#94a3b8' } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // 2. Weekly Trend Chart
+    const ctxWeekly = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(ctxWeekly, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Weekly Incidents',
+                data: [14, 11, 8, 15, 22, 19, 13],
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2,
+                pointBackgroundColor: '#10b981'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { grid: { color: '#1f293d' }, ticks: { color: '#94a3b8' } },
+                x: { grid: { color: 'transparent' }, ticks: { color: '#94a3b8' } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // 3. Category Doughnut Chart
+    const ctxCategory = document.getElementById('categoryChart').getContext('2d');
+    new Chart(ctxCategory, {
+        type: 'doughnut',
+        data: {
+            labels: ['Plastic Bags', 'Bottles / Cans', 'Paper / Wrappers', 'Food Waste'],
+            datasets: [{
+                data: [52, 24, 16, 8],
+                backgroundColor: ['#ef4444', '#3b82f6', '#f59e0b', '#10b981'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#cbd5e1', padding: 14 } }
+            }
+        }
+    });
+</script>
+{% endblock %}
+

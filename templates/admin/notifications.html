@@ -1,0 +1,361 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Telegram & Instant Alerts - WasteAI Control Portal{% endblock %}
+{% block page_title %}Instant Telegram, WhatsApp & Push Notifications{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notif-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+    @media (max-width: 1050px) {
+        .notif-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-group-admin {
+        margin-bottom: 18px;
+    }
+
+    .form-label-admin {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #cbd5e1;
+        margin-bottom: 8px;
+    }
+
+    .form-input-admin {
+        width: 100%;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 11px 14px;
+        color: #fff;
+        font-size: 14px;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .form-input-admin:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .switch-toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 16px;
+        background: #1e293b;
+        border-radius: 10px;
+        border: 1px solid #334155;
+        margin-bottom: 16px;
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider-round {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #334155;
+        transition: .3s;
+        border-radius: 24px;
+    }
+
+    .slider-round:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+    }
+
+    input:checked + .slider-round {
+        background-color: #0ea5e9;
+    }
+
+    input:checked + .slider-round:before {
+        transform: translateX(20px);
+    }
+
+    .telegram-preview-box {
+        background: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 12px;
+        padding: 18px;
+        margin-top: 16px;
+    }
+
+    .tg-msg-bubble {
+        background: #1e293b;
+        border-radius: 12px;
+        padding: 14px;
+        border-left: 4px solid #0ea5e9;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #e2e8f0;
+    }
+
+    .tg-msg-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        color: #38bdf8;
+        margin-bottom: 8px;
+    }
+
+    .guide-step {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 14px;
+        font-size: 13px;
+        color: #cbd5e1;
+    }
+
+    .step-number {
+        width: 24px;
+        height: 24px;
+        background: rgba(14, 165, 233, 0.2);
+        color: #38bdf8;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="notif-grid">
+
+    <!-- TELEGRAM CONFIGURATION -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-brands fa-telegram" style="color:#0ea5e9;"></i>
+                <span>Telegram Bot Alert Channel</span>
+            </div>
+            <span class="badge-pill" style="background:rgba(14,165,233,0.15); color:#38bdf8; border:1px solid rgba(14,165,233,0.3);">
+                Instant Push
+            </span>
+        </div>
+
+        <form action="{{ url_for('admin_notifications') }}" method="POST">
+            <input type="hidden" name="action" value="save_telegram">
+
+            <!-- TOGGLE -->
+            <div class="switch-toggle-row">
+                <div>
+                    <h4 style="font-size:14px; font-weight:700; color:#fff; margin-bottom:2px;">Enable Telegram Instant Alerts</h4>
+                    <p style="font-size:12px; color:var(--text-muted);">Automatically send photo and violation details when dumping is detected</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="telegram_enabled" value="1" {% if telegram_enabled %}checked{% endif %}>
+                    <span class="slider-round"></span>
+                </label>
+            </div>
+
+            <!-- BOT TOKEN -->
+            <div class="form-group-admin">
+                <label class="form-label-admin" for="botToken">Telegram Bot Token</label>
+                <input 
+                    type="text" 
+                    id="botToken" 
+                    name="telegram_bot_token" 
+                    class="form-input-admin" 
+                    placeholder="e.g. 7123456789:AAH..." 
+                    value="{{ telegram_bot_token }}"
+                >
+            </div>
+
+            <!-- CHAT ID -->
+            <div class="form-group-admin">
+                <label class="form-label-admin" for="chatId">Telegram Chat ID / Group ID</label>
+                <input 
+                    type="text" 
+                    id="chatId" 
+                    name="telegram_chat_id" 
+                    class="form-input-admin" 
+                    placeholder="e.g. 123456789 or -100123456789" 
+                    value="{{ telegram_chat_id }}"
+                >
+                <span style="font-size:11px; color:var(--text-muted); display:block; margin-top:4px;">
+                    Enter your personal user ID or security group chat ID.
+                </span>
+            </div>
+
+            <!-- TOGGLE SEND PHOTO -->
+            <div class="switch-toggle-row">
+                <div>
+                    <h4 style="font-size:13px; font-weight:700; color:#fff; margin-bottom:2px;">Attach High-Res Evidence Photo</h4>
+                    <p style="font-size:11px; color:var(--text-muted);">Send the captured bounding box screenshot along with text</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" name="send_photo" value="1" {% if telegram_send_photo %}checked{% endif %}>
+                    <span class="slider-round"></span>
+                </label>
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:20px;">
+                <button type="submit" class="btn-primary-action" style="flex:1; justify-content:center; background:linear-gradient(135deg, #0284c7, #0ea5e9);">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Telegram Settings
+                </button>
+                <button type="button" class="feed-btn" onclick="sendTestTelegram()" style="background:#1e293b; color:#38bdf8; border-color:#0ea5e9;">
+                    <i class="fa-solid fa-paper-plane"></i> Send Test Alert
+                </button>
+            </div>
+
+            <div id="testFeedback" style="margin-top:14px; font-size:13px; text-align:center;"></div>
+        </form>
+
+        <!-- PREVIEW -->
+        <div class="telegram-preview-box">
+            <h4 style="font-size:12px; text-transform:uppercase; color:#94a3b8; font-weight:700; margin-bottom:10px;">
+                <i class="fa-solid fa-eye"></i> Simulated Telegram Alert Preview
+            </h4>
+            <div class="tg-msg-bubble">
+                <div class="tg-msg-header">
+                    <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i>
+                    <span>🚨 SWACHH BHARAT VIOLATION ALERT</span>
+                </div>
+                <b>Incident ID:</b> #11492<br>
+                <b>Violation:</b> ILLEGAL DUMPING (1 Waste item outside dustbin)<br>
+                <b>Camera:</b> CAM-01 (Main Monitoring Zone)<br>
+                <b>Location:</b> Paralakhemundi, Odisha<br>
+                <b>Time:</b> 2026-10-24 00:42:15<br>
+                <b>Confidence:</b> 59% (YOLO-Waste + ByteTrack)<br>
+                <i>📸 Evidence snapshot attached below.</i>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOT SETUP GUIDE -->
+    <div style="display:flex; flex-direction:column; gap:24px;">
+        
+        <div class="card" style="margin-bottom:0;">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-circle-question" style="color:#38bdf8;"></i>
+                    <span>How To Get Bot Token in 1 Minute</span>
+                </div>
+            </div>
+
+            <div class="guide-step">
+                <span class="step-number">1</span>
+                <div>
+                    Open Telegram and search for <b>@BotFather</b>. Send the message <code>/newbot</code>.
+                </div>
+            </div>
+
+            <div class="guide-step">
+                <span class="step-number">2</span>
+                <div>
+                    Choose a name for your bot (e.g., <i>WasteMonitorBot</i>) and a username ending in <code>bot</code>.
+                </div>
+            </div>
+
+            <div class="guide-step">
+                <span class="step-number">3</span>
+                <div>
+                    BotFather will reply with your <b>HTTP API Token</b>. Copy and paste it in the field on the left.
+                </div>
+            </div>
+
+            <div class="guide-step">
+                <span class="step-number">4</span>
+                <div>
+                    To get your <b>Chat ID</b>, search for <b>@userinfobot</b> on Telegram, click Start, and copy the ID number it gives you.
+                </div>
+            </div>
+
+            <div class="guide-step" style="margin-bottom:0;">
+                <span class="step-number">5</span>
+                <div>
+                    Click <b>"Send Test Alert"</b> to confirm your phone receives the live photo notification!
+                </div>
+            </div>
+        </div>
+
+        <!-- WHATSAPP & WEBHOOK ALERT INTEGRATION -->
+        <div class="card" style="margin-bottom:0;">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-brands fa-whatsapp" style="color:#22c55e;"></i>
+                    <span>WhatsApp / Webhook Alert</span>
+                </div>
+            </div>
+
+            <form action="{{ url_for('admin_notifications') }}" method="POST">
+                <input type="hidden" name="action" value="save_webhook">
+                <div class="form-group-admin">
+                    <label class="form-label-admin">Custom Webhook / WhatsApp API URL</label>
+                    <input 
+                        type="text" 
+                        name="webhook_url" 
+                        class="form-input-admin" 
+                        placeholder="https://api.whatsapp.com/send or Discord/Slack URL" 
+                        value="{{ webhook_url }}"
+                    >
+                </div>
+                <button type="submit" class="feed-btn" style="width:100%; justify-content:center; background:#1e293b; color:#22c55e; border-color:#22c55e;">
+                    <i class="fa-solid fa-link"></i> Save Webhook URL
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function sendTestTelegram() {
+        const fb = document.getElementById("testFeedback");
+        fb.innerHTML = '<span style="color:#38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Sending test alert to Telegram...</span>';
+
+        try {
+            const res = await fetch("/api/test_telegram_alert", {
+                method: "POST"
+            });
+            const data = await res.json();
+            if (data.success) {
+                fb.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-check"></i> ${data.message}</span>`;
+            } else {
+                fb.innerHTML = `<span style="color:#f87171;"><i class="fa-solid fa-triangle-exclamation"></i> ${data.error}</span>`;
+            }
+        } catch (e) {
+            fb.innerHTML = `<span style="color:#f87171;"><i class="fa-solid fa-xmark"></i> Connection error: ${e}</span>`;
+        }
+    }
+</script>
+{% endblock %}
+

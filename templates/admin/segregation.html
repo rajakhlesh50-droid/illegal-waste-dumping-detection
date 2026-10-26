@@ -1,0 +1,157 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Waste Segregation - WasteAI Control Portal{% endblock %}
+{% block page_title %}Dry vs Wet Waste (Green/Blue Receptacle) Segregation{% endblock %}
+
+{% block extra_css %}
+<style>
+    .segregation-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+    @media (max-width: 1050px) {
+        .segregation-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .bin-comparison-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .bin-header-blue {
+        border-bottom: 2px solid #3b82f6;
+        padding-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .bin-header-green {
+        border-bottom: 2px solid #10b981;
+        padding-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .allowed-item-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        margin: 4px;
+        font-weight: 600;
+    }
+
+    .tag-blue { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .tag-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ACCURACY KPI -->
+<div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+    <div class="metric-card green">
+        <div class="metric-icon-box">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="metric-info">
+            <h3>91.4%</h3>
+            <p>Segregation Accuracy</p>
+        </div>
+    </div>
+
+    <div class="metric-card blue">
+        <div class="metric-icon-box">
+            <i class="fa-solid fa-box-archive"></i>
+        </div>
+        <div class="metric-info">
+            <h3>68 Items</h3>
+            <p>Dry Waste (Plastic / Metal)</p>
+        </div>
+    </div>
+
+    <div class="metric-card purple">
+        <div class="metric-icon-box">
+            <i class="fa-solid fa-apple-whole"></i>
+        </div>
+        <div class="metric-info">
+            <h3>32 Items</h3>
+            <p>Wet / Biodegradable Waste</p>
+        </div>
+    </div>
+</div>
+
+<!-- DUAL BIN SPECIFICATION -->
+<div class="segregation-grid">
+
+    <!-- DRY WASTE RECEPTACLE -->
+    <div class="bin-comparison-card">
+        <div class="bin-header-blue">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-trash-can" style="color:#3b82f6; font-size:20px;"></i>
+                <h3 style="color:#fff; font-size:16px; font-weight:700;">Dry Waste Receptacle (Blue Bin)</h3>
+            </div>
+            <span class="badge-pill" style="background:#1e293b; color:#60a5fa;">Non-Biodegradable</span>
+        </div>
+
+        <p style="font-size:13px; color:var(--text-muted);">
+            Monitored categories classified as recyclable dry waste by the custom YOLO model:
+        </p>
+
+        <div>
+            <span class="allowed-item-tag tag-blue"><i class="fa-solid fa-bottle-water"></i> Plastic Bottles</span>
+            <span class="allowed-item-tag tag-blue"><i class="fa-solid fa-bag-shopping"></i> Plastic Polythene</span>
+            <span class="allowed-item-tag tag-blue"><i class="fa-solid fa-box"></i> Milk Pouches / Packets</span>
+            <span class="allowed-item-tag tag-blue"><i class="fa-solid fa-mug-hot"></i> Disposable Cups</span>
+            <span class="allowed-item-tag tag-blue"><i class="fa-solid fa-newspaper"></i> Paper / Cardboard</span>
+        </div>
+
+        <div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #1e293b; font-size:12px; color:#cbd5e1; margin-top:auto;">
+            <i class="fa-solid fa-circle-info" style="color:#38bdf8;"></i> AI Flag: Thrown outside dustbin = <b>ILLEGAL DUMPING</b>
+        </div>
+    </div>
+
+    <!-- WET WASTE RECEPTACLE -->
+    <div class="bin-comparison-card">
+        <div class="bin-header-green">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-trash-can" style="color:#10b981; font-size:20px;"></i>
+                <h3 style="color:#fff; font-size:16px; font-weight:700;">Wet Waste Receptacle (Green Bin)</h3>
+            </div>
+            <span class="badge-pill" style="background:#1e293b; color:#34d399;">Biodegradable</span>
+        </div>
+
+        <p style="font-size:13px; color:var(--text-muted);">
+            Monitored organic and decomposable waste categories:
+        </p>
+
+        <div>
+            <span class="allowed-item-tag tag-green"><i class="fa-solid fa-apple-whole"></i> Fruit & Vegetable Peels</span>
+            <span class="allowed-item-tag tag-green"><i class="fa-solid fa-bowl-food"></i> Food Leftovers</span>
+            <span class="allowed-item-tag tag-green"><i class="fa-solid fa-leaf"></i> Garden Waste</span>
+            <span class="allowed-item-tag tag-green"><i class="fa-solid fa-egg"></i> Kitchen Organic</span>
+        </div>
+
+        <div style="background:#0f172a; padding:12px; border-radius:8px; border:1px solid #1e293b; font-size:12px; color:#cbd5e1; margin-top:auto;">
+            <i class="fa-solid fa-circle-check" style="color:#34d399;"></i> Segregation compliance rate is currently high (&gt;90%).
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+

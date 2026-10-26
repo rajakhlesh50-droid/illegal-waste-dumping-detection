@@ -1,0 +1,697 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Mobile App (PWA) Mode - WasteAI Control Portal{% endblock %}
+{% block page_title %}Mobile Progressive Web App (PWA) Deployment{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pwa-layout-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+    @media (max-width: 1080px) {
+        .pwa-layout-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Interactive QR & Phone Hub */
+    .qr-hub-card {
+        background: #090e1a;
+        border: 1px solid #1f293d;
+        border-radius: 16px;
+        padding: 24px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+
+    .qr-mode-tabs {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+        background: #111827;
+        padding: 4px;
+        border-radius: 10px;
+        border: 1px solid #1f293d;
+    }
+
+    .qr-mode-tab {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        border: none;
+        border-radius: 7px;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .qr-mode-tab.active {
+        background: #10b981;
+        color: #fff;
+        box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+    }
+
+    .qr-target-tabs {
+        display: flex;
+        gap: 6px;
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 2px;
+    }
+
+    .qr-target-pill {
+        flex: 1;
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        border-radius: 6px;
+        border: 1px solid #334155;
+        background: #1e293b;
+        color: #cbd5e1;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+        text-align: center;
+    }
+
+    .qr-target-pill.active {
+        border-color: #38bdf8;
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+    }
+
+    /* Scanner Frame */
+    .scanner-box {
+        position: relative;
+        background: #ffffff;
+        padding: 16px;
+        border-radius: 16px;
+        box-shadow: 0 0 35px rgba(16, 185, 129, 0.2);
+        display: inline-block;
+        margin: 6px 0;
+    }
+
+    .scanner-corner {
+        position: absolute;
+        width: 22px;
+        height: 22px;
+        border-color: #10b981;
+        border-style: solid;
+        pointer-events: none;
+    }
+    .corner-tl { top: -2px; left: -2px; border-width: 4px 0 0 4px; border-top-left-radius: 8px; }
+    .corner-tr { top: -2px; right: -2px; border-width: 4px 4px 0 0; border-top-right-radius: 8px; }
+    .corner-bl { bottom: -2px; left: -2px; border-width: 0 0 4px 4px; border-bottom-left-radius: 8px; }
+    .corner-br { bottom: -2px; right: -2px; border-width: 0 4px 4px 0; border-bottom-right-radius: 8px; }
+
+    #qrImage {
+        width: 210px;
+        height: 210px;
+        display: block;
+        object-fit: contain;
+    }
+
+    /* URL Bar */
+    .url-display-box {
+        width: 100%;
+        background: #111827;
+        border: 1px solid #1f293d;
+        border-radius: 10px;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .url-text-code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        color: #38bdf8;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: left;
+    }
+
+    .copy-btn {
+        background: #1e293b;
+        border: 1px solid #334155;
+        color: #f1f5f9;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .copy-btn:hover {
+        background: #10b981;
+        border-color: #10b981;
+        color: #ffffff;
+    }
+
+    /* Icon Preview Chips */
+    .icon-preview-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 14px;
+        background: #090e1a;
+        border-radius: 10px;
+        border: 1px solid #1f293d;
+        margin-top: 14px;
+    }
+
+    .icon-chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .icon-chip img {
+        border-radius: 12px;
+        border: 1px solid #334155;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .icon-chip span {
+        font-size: 10px;
+        color: #94a3b8;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Install Step Cards */
+    .steps-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 16px;
+    }
+
+    @media (max-width: 650px) {
+        .steps-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .step-card {
+        background: #090e1a;
+        border: 1px solid #1f293d;
+        border-radius: 12px;
+        padding: 16px;
+    }
+
+    .step-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-size: 14px;
+        font-weight: 700;
+        color: #f8fafc;
+    }
+
+    .step-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .step-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        line-height: 1.45;
+    }
+
+    .step-num {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        font-weight: 800;
+        font-size: 11px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- TOP ACTIONS -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+        <span class="badge-pill" style="background:rgba(16, 185, 129, 0.15); color:#34d399; font-weight:700;">
+            <i class="fa-solid fa-signal pulse-dot"></i> Server Listening on 0.0.0.0:{{ port }}
+        </span>
+        <span class="badge-pill" style="background:rgba(56, 189, 248, 0.15); color:#38bdf8;">
+            <i class="fa-solid fa-mobile"></i> Standalone PWA Enabled
+        </span>
+    </div>
+    <div style="display:flex; gap:10px;">
+        <a href="/" target="_blank" class="btn-secondary-action" style="text-decoration:none;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Public Feed
+        </a>
+        <a href="/admin/dashboard" class="btn-secondary-action" style="text-decoration:none;">
+            <i class="fa-solid fa-gauge-high"></i> Admin Portal
+        </a>
+    </div>
+</div>
+
+<div class="pwa-layout-grid">
+
+    <!-- LEFT COLUMN: SYSTEM STATUS & INSTALLATION -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <!-- PWA STATUS & ONE CLICK INSTALL -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-mobile-screen-button" style="color:var(--primary);"></i>
+                    <span>Progressive Web App (PWA) Standalone Mode</span>
+                </div>
+                <span class="badge-pill" style="background:rgba(16,185,129,0.15); color:#34d399;">
+                    <i class="fa-solid fa-circle-check"></i> Service Worker Active
+                </span>
+            </div>
+
+            <p style="font-size:13px; color:var(--text-muted); line-height:1.6; margin-bottom:18px;">
+                WasteAI operates as a fully progressive web application on Android, iPhone, Windows, and Mac. Field officers, municipal inspectors, and patrol teams can install it directly to their phone home screen with <b>zero Play Store download delay</b>, offline asset caching, and native full-screen performance.
+            </p>
+
+            <!-- Technical Checklist -->
+            <div style="background:#090e1a; padding:16px; border-radius:12px; border:1px solid #1f293d; margin-bottom:18px; font-size:13px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="color:var(--text-muted);"><i class="fa-solid fa-file-code" style="color:#38bdf8; margin-right:6px;"></i> Web App Manifest:</span>
+                    <span style="color:#34d399; font-weight:700;"><i class="fa-solid fa-check"></i> /manifest.json (Configured)</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="color:var(--text-muted);"><i class="fa-solid fa-gears" style="color:#a855f7; margin-right:6px;"></i> Service Worker Script:</span>
+                    <span style="color:#34d399; font-weight:700;"><i class="fa-solid fa-check"></i> /sw.js (Cache v2 Active)</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="color:var(--text-muted);"><i class="fa-solid fa-expand" style="color:#f59e0b; margin-right:6px;"></i> App Display Mode:</span>
+                    <span style="color:#38bdf8; font-weight:700;">Standalone (Full Screen Native UI)</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:var(--text-muted);"><i class="fa-solid fa-network-wired" style="color:#10b981; margin-right:6px;"></i> Host Binding:</span>
+                    <span style="color:#10b981; font-weight:700; font-family:'JetBrains Mono';">0.0.0.0:{{ port }} (LAN & Hotspot Live)</span>
+                </div>
+            </div>
+
+            <!-- App Icon Preview -->
+            <div class="icon-preview-row">
+                <div style="font-size:12px; color:var(--text-muted); line-height:1.4;">
+                    <b style="color:#f1f5f9; display:block; margin-bottom:2px;">Dynamic PWA App Icons:</b>
+                    Shield & AI Surveillance branding rendered across multi-density device screens.
+                </div>
+                <div style="display:flex; gap:12px; margin-left:auto;">
+                    <div class="icon-chip">
+                        <img src="/static/icons/icon-96.png" width="36" height="36" alt="Icon 96">
+                        <span>96px</span>
+                    </div>
+                    <div class="icon-chip">
+                        <img src="/static/icons/icon-192.png" width="44" height="44" alt="Icon 192">
+                        <span>192px</span>
+                    </div>
+                    <div class="icon-chip">
+                        <img src="/static/icons/icon-512.png" width="52" height="52" alt="Icon 512">
+                        <span>512px</span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="pwaInstallBtn" class="btn-primary-action" style="width:100%; justify-content:center; padding:13px; font-size:14px; margin-top:20px;" onclick="triggerPwaInstall()">
+                <i class="fa-solid fa-download"></i> Install WasteAI App on This Device
+            </button>
+            <p id="installNote" style="font-size:11px; color:#64748b; text-align:center; margin-top:8px;">
+                Browser prompt active. On mobile devices, scan the QR code to install directly.
+            </p>
+        </div>
+
+        <!-- STEP BY STEP GUIDES -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-list-check" style="color:#38bdf8;"></i>
+                    <span>Mobile Phone Installation Guide</span>
+                </div>
+            </div>
+
+            <div class="steps-grid">
+                <!-- ANDROID -->
+                <div class="step-card">
+                    <div class="step-card-header">
+                        <i class="fa-brands fa-android" style="color:#10b981; font-size:18px;"></i>
+                        <span>Android Phone (Chrome)</span>
+                    </div>
+                    <ul class="step-list">
+                        <li>
+                            <span class="step-num">1</span>
+                            <span>Connect phone Wi-Fi to Laptop Hotspot or same Wi-Fi network.</span>
+                        </li>
+                        <li>
+                            <span class="step-num">2</span>
+                            <span>Open Camera or Google Lens and scan the QR code on the right.</span>
+                        </li>
+                        <li>
+                            <span class="step-num">3</span>
+                            <span>Tap Chrome's 3-dot menu icon (<b>⋮</b>) in the top-right corner.</span>
+                        </li>
+                        <li>
+                            <span class="step-num">4</span>
+                            <span>Select <b>"Add to Home screen"</b> or <b>"Install App"</b>.</span>
+                        </li>
+                        <li>
+                            <span class="step-num">5</span>
+                            <span>Launch WasteAI anytime straight from your mobile apps screen!</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- IPHONE -->
+                <div class="step-card">
+                    <div class="step-card-header">
+                        <i class="fa-brands fa-apple" style="color:#f8fafc; font-size:18px;"></i>
+                        <span>iPhone / iPad (Safari)</span>
+                    </div>
+                    <ul class="step-list">
+                        <li>
+                            <span class="step-num">1</span>
+                            <span>Connect iPhone Wi-Fi to Laptop Hotspot or shared Wi-Fi.</span>
+                        </li>
+                        <li>
+                            <span class="step-num">2</span>
+                            <span>Scan QR code with the iOS Camera app and tap the link to open in Safari.</span>
+                        </li>
+                        <li>
+                            <span class="step-num">3</span>
+                            <span>Tap the <b>Share</b> button (<i class="fa-solid fa-arrow-up-from-bracket"></i>) at the bottom.</span>
+                        </li>
+                        <li>
+                            <span class="step-num">4</span>
+                            <span>Scroll down and tap <b>"Add to Home Screen"</b> (<i class="fa-regular fa-square-plus"></i>).</span>
+                        </li>
+                        <li>
+                            <span class="step-num">5</span>
+                            <span>Tap <b>Add</b>. WasteAI icon is now on your iPhone home screen!</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: INTERACTIVE SCANNABLE QR HUB -->
+    <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <div class="qr-hub-card">
+
+            <div style="display:flex; align-items:center; gap:12px; width:100%;">
+                <div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg, #059669, #10b981); display:flex; align-items:center; justify-content:center; color:#fff; font-size:22px; box-shadow:0 0 15px rgba(16,185,129,0.3); flex-shrink:0;">
+                    <i class="fa-solid fa-qrcode"></i>
+                </div>
+                <div style="text-align:left;">
+                    <h3 style="color:#fff; font-size:16px; font-weight:800; margin:0;">Scan to Open on Mobile</h3>
+                    <p style="font-size:12px; color:var(--text-muted); margin:0;">Real-time Scannable QR Code for Phone</p>
+                </div>
+            </div>
+
+            <!-- Mode Selector: Hotspot vs Wi-Fi -->
+            <div class="qr-mode-tabs">
+                <button type="button" class="qr-mode-tab {% if has_hotspot %}active{% endif %}" id="tabHotspot" onclick="switchMode('hotspot')">
+                    <i class="fa-solid fa-wifi"></i> Laptop Hotspot
+                </button>
+                <button type="button" class="qr-mode-tab {% if not has_hotspot %}active{% endif %}" id="tabWifi" onclick="switchMode('wifi')">
+                    <i class="fa-solid fa-network-wired"></i> Wi-Fi LAN
+                </button>
+            </div>
+
+            <!-- Destination Route Selector -->
+            <div style="width:100%; text-align:left;">
+                <span style="font-size:11px; color:#94a3b8; font-weight:600; display:block; margin-bottom:6px;">
+                    Select Mobile App Starting Screen:
+                </span>
+                <div class="qr-target-tabs">
+                    <div class="qr-target-pill active" id="pillFeed" onclick="switchTarget('/')">
+                        <i class="fa-solid fa-video"></i> Public Feed
+                    </div>
+                    <div class="qr-target-pill" id="pillAdmin" onclick="switchTarget('/admin/dashboard')">
+                        <i class="fa-solid fa-gauge-high"></i> Admin Portal
+                    </div>
+                    <div class="qr-target-pill" id="pillMatrix" onclick="switchTarget('/admin/multi-camera')">
+                        <i class="fa-solid fa-table-cells"></i> 4-CCTV Grid
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real Scannable QR Code Image -->
+            <div class="scanner-box">
+                <div class="scanner-corner corner-tl"></div>
+                <div class="scanner-corner corner-tr"></div>
+                <div class="scanner-corner corner-bl"></div>
+                <div class="scanner-corner corner-br"></div>
+                <img id="qrImage" src="{% if has_hotspot and qr_hotspot %}{{ qr_hotspot }}{% elif qr_wifi %}{{ qr_wifi }}{% else %}https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=http://192.168.137.1:5001/{% endif %}" alt="WasteAI Mobile QR Code">
+            </div>
+
+            <!-- URL Bar with 1-Click Copy -->
+            <div class="url-display-box">
+                <div class="url-text-code" id="urlDisplay">
+                    {% if has_hotspot %}{{ hotspot_url }}{% else %}{{ wifi_url }}{% endif %}
+                </div>
+                <button type="button" class="copy-btn" onclick="copyCurrentUrl()">
+                    <i class="fa-regular fa-copy" id="copyIcon"></i>
+                    <span id="copyText">Copy</span>
+                </button>
+            </div>
+
+            <!-- Network Status Alert -->
+            <div style="width:100%; background:#0e1526; border-radius:10px; border:1px solid #1f293d; padding:12px; font-size:12px; text-align:left; line-height:1.5;">
+                <div id="statusHotspot" style="display:{% if has_hotspot %}block{% else %}none{% endif %};">
+                    <div style="color:#34d399; font-weight:700; margin-bottom:4px;">
+                        <i class="fa-solid fa-circle-check"></i> Windows Mobile Hotspot Active (192.168.137.1)
+                    </div>
+                    <span style="color:#94a3b8;">
+                        Connect your mobile phone's Wi-Fi to your Laptop Hotspot network, then point your camera at the QR code.
+                    </span>
+                </div>
+
+                <div id="statusWifi" style="display:{% if not has_hotspot %}block{% else %}none{% endif %};">
+                    <div style="color:#38bdf8; font-weight:700; margin-bottom:4px;">
+                        <i class="fa-solid fa-tower-broadcast"></i> Local Wi-Fi Network Mode ({{ wifi_ip }})
+                    </div>
+                    <span style="color:#94a3b8;">
+                        Make sure both your Laptop and Mobile phone are connected to the same Wi-Fi router.
+                    </span>
+                </div>
+            </div>
+
+            <!-- Quick Action Row -->
+            <div style="display:flex; gap:10px; width:100%;">
+                <button type="button" class="btn-secondary-action" style="flex:1; justify-content:center;" onclick="openUrlNewTab()">
+                    <i class="fa-solid fa-external-link"></i> Test on PC
+                </button>
+                <button type="button" class="btn-secondary-action" style="flex:1; justify-content:center;" onclick="downloadQrCode()">
+                    <i class="fa-solid fa-download"></i> Save QR Image
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Hotspot Configuration Helper -->
+        <div class="card" style="border-left:4px solid #10b981;">
+            <div style="display:flex; align-items:flex-start; gap:12px;">
+                <i class="fa-solid fa-lightbulb" style="color:#fbbf24; font-size:20px; margin-top:2px;"></i>
+                <div style="font-size:12px; line-height:1.5;">
+                    <b style="color:#fff; display:block; margin-bottom:4px;">Quick Tip: Direct Laptop-to-Phone Hotspot</b>
+                    If your laptop and mobile phone are not on the same Wi-Fi, simply turn on <b>Windows Mobile Hotspot</b> in your PC settings. Your phone will immediately connect directly to your laptop with zero router required.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // State
+    const HOTSPOT_IP = "{{ hotspot_ip }}";
+    const WIFI_IP = "{{ wifi_ip }}";
+    const PORT = "{{ port }}";
+
+    let currentMode = {% if has_hotspot %}"hotspot"{% else %}"wifi"{% endif %};
+    let currentTarget = "/";
+
+    function computeActiveUrl() {
+        const ip = (currentMode === 'hotspot') ? HOTSPOT_IP : WIFI_IP;
+        const path = currentTarget.startsWith('/') ? currentTarget : ('/' + currentTarget);
+        return `http://${ip}:${PORT}${path}`;
+    }
+
+    async function updateQrCode() {
+        const url = computeActiveUrl();
+        const displayEl = document.getElementById("urlDisplay");
+        if (displayEl) displayEl.innerText = url;
+
+        // Fetch fresh QR code from backend API
+        try {
+            const resp = await fetch(`/api/generate_qr?url=${encodeURIComponent(url)}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.qr) {
+                    const img = document.getElementById("qrImage");
+                    if (img) img.src = data.qr;
+                    return;
+                }
+            }
+        } catch (err) {
+            console.warn("Backend QR fetch error, using fallback:", err);
+        }
+
+        // Fallback if backend server hasn't been restarted yet
+        const img = document.getElementById("qrImage");
+        if (img) {
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`;
+        }
+    }
+
+    function switchMode(mode) {
+        currentMode = mode;
+        const tabH = document.getElementById("tabHotspot");
+        const tabW = document.getElementById("tabWifi");
+        const statH = document.getElementById("statusHotspot");
+        const statW = document.getElementById("statusWifi");
+
+        if (mode === 'hotspot') {
+            if (tabH) tabH.classList.add("active");
+            if (tabW) tabW.classList.remove("active");
+            if (statH) statH.style.display = "block";
+            if (statW) statW.style.display = "none";
+        } else {
+            if (tabW) tabW.classList.add("active");
+            if (tabH) tabH.classList.remove("active");
+            if (statW) statW.style.display = "block";
+            if (statH) statH.style.display = "none";
+        }
+
+        updateQrCode();
+    }
+
+    function switchTarget(path) {
+        currentTarget = path;
+        const pFeed = document.getElementById("pillFeed");
+        const pAdmin = document.getElementById("pillAdmin");
+        const pMatrix = document.getElementById("pillMatrix");
+
+        [pFeed, pAdmin, pMatrix].forEach(p => p && p.classList.remove("active"));
+
+        if (path === '/') {
+            if (pFeed) pFeed.classList.add("active");
+        } else if (path === '/admin/dashboard') {
+            if (pAdmin) pAdmin.classList.add("active");
+        } else if (path === '/admin/multi-camera') {
+            if (pMatrix) pMatrix.classList.add("active");
+        }
+
+        updateQrCode();
+    }
+
+    function copyCurrentUrl() {
+        const url = computeActiveUrl();
+        navigator.clipboard.writeText(url).then(() => {
+            const copyText = document.getElementById("copyText");
+            const copyIcon = document.getElementById("copyIcon");
+            if (copyText) copyText.innerText = "Copied!";
+            if (copyIcon) {
+                copyIcon.className = "fa-solid fa-check";
+                copyIcon.style.color = "#34d399";
+            }
+            setTimeout(() => {
+                if (copyText) copyText.innerText = "Copy";
+                if (copyIcon) {
+                    copyIcon.className = "fa-regular fa-copy";
+                    copyIcon.style.color = "";
+                }
+            }, 2000);
+        }).catch(err => {
+            prompt("Copy URL:", url);
+        });
+    }
+
+    function openUrlNewTab() {
+        const url = computeActiveUrl();
+        window.open(url, '_blank');
+    }
+
+    function downloadQrCode() {
+        const img = document.getElementById("qrImage");
+        if (img && img.src) {
+            const a = document.createElement("a");
+            a.href = img.src;
+            a.download = `wasteai-mobile-qr-${currentMode}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    }
+
+    // PWA Install Prompt Handler
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const btn = document.getElementById("pwaInstallBtn");
+        const note = document.getElementById("installNote");
+        if (btn) btn.style.display = "flex";
+        if (note) note.innerText = "PWA Install trigger ready on this browser.";
+    });
+
+    async function triggerPwaInstall() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                alert("WasteAI App installed successfully!");
+            }
+            deferredPrompt = null;
+        } else {
+            alert("To install WasteAI App on Mobile:\n\n1. Scan the QR code with your phone camera\n2. Open in Chrome or Safari\n3. Tap browser menu and tap 'Add to Home screen' or 'Install App'.");
+        }
+    }
+</script>
+{% endblock %}

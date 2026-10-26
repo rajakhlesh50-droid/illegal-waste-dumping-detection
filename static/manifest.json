@@ -1,0 +1,26 @@
+{
+  "name": "WasteAI - Smart Waste Surveillance System",
+  "short_name": "WasteAI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#10b981",
+  "description": "AI-Powered Smart Waste Monitoring, Illegal Dumping Detection & Surveillance Matrix",
+  "icons": [
+    {
+      "src": "/static/icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{% extends "admin/base.html" %}
+
+{% block title %}E-Challan & Fine Notice Generator - WasteAI Control Portal{% endblock %}
+{% block page_title %}Digital E-Challan & Penalty Notice Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .challan-stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 18px;
+        margin-bottom: 24px;
+    }
+
+    .challan-stat-box {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 18px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .challan-stat-icon {
+        width: 46px;
+        height: 46px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .btn-challan {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #d97706, #f59e0b);
+        color: #fff;
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        transition: all 0.2s;
+    }
+
+    .btn-challan:hover {
+        background: linear-gradient(135deg, #b45309, #d97706);
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- STATS -->
+<div class="challan-stats-row">
+    <div class="challan-stat-box">
+        <div class="challan-stat-icon" style="background:rgba(245,158,11,0.15); color:#fbbf24;">
+            <i class="fa-solid fa-receipt"></i>
+        </div>
+        <div>
+            <h3 style="font-size:22px; font-weight:800; color:#fff;">{{ incidents|length }}</h3>
+            <p style="font-size:12px; color:var(--text-muted);">Total Violations Eligible</p>
+        </div>
+    </div>
+
+    <div class="challan-stat-box">
+        <div class="challan-stat-icon" style="background:rgba(239,68,68,0.15); color:#f87171;">
+            <i class="fa-solid fa-indian-rupee-sign"></i>
+        </div>
+        <div>
+            <h3 style="font-size:22px; font-weight:800; color:#fff;">₹{{ incidents|length * 500 }}</h3>
+            <p style="font-size:12px; color:var(--text-muted);">Estimated Penalties (₹500/violation)</p>
+        </div>
+    </div>
+
+    <div class="challan-stat-box">
+        <div class="challan-stat-icon" style="background:rgba(16,185,129,0.15); color:#34d399;">
+            <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+        <div>
+            <h3 style="font-size:22px; font-weight:800; color:#fff;">Swachh Bharat</h3>
+            <p style="font-size:12px; color:var(--text-muted);">Public Nuisance Sec. 133</p>
+        </div>
+    </div>
+</div>
+
+<!-- VIOLATIONS TABLE -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <i class="fa-solid fa-file-invoice-dollar" style="color:#fbbf24;"></i>
+            <span>Violations Ready For E-Challan Generation</span>
+        </div>
+        <span style="font-size:12px; color:var(--text-muted);">Click "Generate Notice" to print official notice</span>
+    </div>
+
+    <div class="table-container">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Evidence Photo</th>
+                    <th>Challan ID</th>
+                    <th>Date & Time</th>
+                    <th>Camera / Location</th>
+                    <th>Litter Object</th>
+                    <th>Fine Amount</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if incidents %}
+                    {% for row in incidents %}
+                    <tr>
+                        <td>
+                            {% if row['evidence_image'] %}
+                            <img src="{{ row['evidence_image'] }}" class="evidence-thumb" alt="Evidence" style="width:60px; height:45px;">
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                        <td>
+                            <b style="color:#fff; font-family:'JetBrains Mono';">ECH-{{ row['id'] }}</b>
+                        </td>
+                        <td>{{ row['detected_at'] }}</td>
+                        <td>
+                            <span style="color:#fff; font-weight:600;">{{ row['camera_id'] or 'CAM-01' }}</span><br>
+                            <span style="font-size:11px; color:var(--text-muted);">{{ row['location'] or 'Paralakhemundi, Odisha' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge-pill danger">
+                                {{ row['waste_type'] or 'waste' }}
+                            </span>
+                        </td>
+                        <td>
+                            <span style="color:#fbbf24; font-weight:700; font-family:'JetBrains Mono';">₹500</span>
+                        </td>
+                        <td>
+                            <div style="display:flex; gap:6px; align-items:center;">
+                                <a href="{{ url_for('admin_challan_slip', incident_id=row['id']) }}" class="btn-challan" target="_blank" title="View & Print Official Legal Slip">
+                                    <i class="fa-solid fa-receipt"></i> Challan Slip
+                                </a>
+                                <a href="https://api.whatsapp.com/send?text=🚨%20*SWACHH%20BHARAT%20VIOLATION%20CHALLAN%20ECH-{{ row['id'] }}*%0ALocation:%20{{ row['location'] or 'Campus%20Premises' }}%0AOffense:%20Illegal%20Waste%20Dumping%20Outside%20Dustbin%0AFine%20Payable:%20₹500%0ATimestamp:%20{{ row['detected_at'] }}%0AEvidence%20Photo:%20{{ request.url_root.rstrip('/') }}{{ row['evidence_image'] }}%0APlease%20pay%20the%20penalty%20within%2014%20days." target="_blank" class="btn-challan" style="background:#25D366; box-shadow:0 2px 8px rgba(37,211,102,0.3);" title="Send Fine Notice via WhatsApp">
+                                    <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">
+                            <i class="fa-solid fa-check-circle" style="font-size:28px; color:#10b981; margin-bottom:8px; display:block;"></i>
+                            No violations recorded. Clean premises!
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,693 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Multi-Camera Manager - WasteAI Control Portal{% endblock %}
+{% block page_title %}Multi-Camera Management & Receptacle Calibrator{% endblock %}
+
+{% block extra_css %}
+<style>
+    .camera-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 28px;
+    }
+
+    @media (max-width: 1050px) {
+        .camera-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .form-group-admin {
+        margin-bottom: 18px;
+    }
+
+    .form-label-admin {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #cbd5e1;
+        margin-bottom: 8px;
+    }
+
+    .form-input-admin {
+        width: 100%;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 10px 14px;
+        color: #fff;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .form-input-admin:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .source-options-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .source-card {
+        border: 1px solid var(--border-color);
+        background: #1e293b;
+        border-radius: 10px;
+        padding: 14px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    .source-card:hover {
+        border-color: #475569;
+        background: #273549;
+    }
+
+    .source-card.active {
+        border-color: var(--primary);
+        background: rgba(16, 185, 129, 0.12);
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+    }
+
+    .source-card input[type="radio"] {
+        display: none;
+    }
+
+    .source-card i {
+        font-size: 22px;
+        margin-bottom: 8px;
+        display: block;
+        color: #94a3b8;
+    }
+
+    .source-card.active i {
+        color: var(--primary);
+    }
+
+    .source-card h4 {
+        font-size: 13px;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 2px;
+    }
+
+    .source-card p {
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .primary-camera-row {
+        background: rgba(16, 185, 129, 0.08);
+    }
+
+    /* CALIBRATOR VIDEO */
+    .calibrator-box {
+        position: relative;
+        background: #000;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .calibrator-box img {
+        width: 100%;
+        height: auto;
+        display: block;
+        cursor: crosshair;
+    }
+
+    .zone-info-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: rgba(0, 0, 0, 0.75);
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        color: #34d399;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+    }
+
+    .modal-content-box {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        max-width: 580px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    }
+
+    .modal-header {
+        padding: 16px 22px;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- MULTIPLE CAMERAS MATRIX TABLE -->
+<div class="card">
+    <div class="card-header">
+        <div>
+            <div class="card-title">
+                <i class="fa-solid fa-network-wired" style="color:var(--primary);"></i>
+                <span>Configured Camera Feeds Matrix (Multiple Camera Support)</span>
+            </div>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:3px;">
+                Manage all CCTV, RTSP, IP Phone, and USB cameras. Switch live AI detection stream with one click.
+            </p>
+        </div>
+
+        <button class="btn-primary-action" onclick="openAddCameraModal()">
+            <i class="fa-solid fa-plus"></i> Add New Camera
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>Camera ID</th>
+                    <th>Friendly Name</th>
+                    <th>Source Type</th>
+                    <th>Stream / RTSP URL</th>
+                    <th>Location</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if cameras %}
+                    {% for cam in cameras %}
+                    {% if cam['is_primary'] %}
+                    <tr class="primary-camera-row">
+                    {% else %}
+                    <tr>
+                    {% endif %}
+                        <td>
+                            {% if cam['is_primary'] %}
+                            <span class="badge-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">
+                                <span class="pulse-dot"></span> ACTIVE AI STREAM
+                            </span>
+                            {% else %}
+                            <span class="badge-pill" style="background: #1e293b; color: #94a3b8;">
+                                STANDBY
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <b style="color:#fff; font-family:'JetBrains Mono';">{{ cam['camera_id'] }}</b>
+                        </td>
+                        <td>
+                            <span style="font-weight:600; color:#e2e8f0;">{{ cam['name'] }}</span>
+                        </td>
+                        <td>
+                            <span class="badge-pill" style="background:#1e293b; color:#38bdf8;">
+                                {{ cam['source_type'] }}
+                            </span>
+                        </td>
+                        <td style="font-family:'JetBrains Mono'; font-size:11px; color:#cbd5e1; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            {{ cam['stream_url'] or 'Device 0 (USB)' }}
+                        </td>
+                        <td>
+                            <span style="color:#94a3b8;"><i class="fa-solid fa-location-dot"></i> {{ cam['location'] }}</span>
+                        </td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                {% if not cam['is_primary'] %}
+                                <form action="{{ url_for('admin_set_primary_camera', cam_id=cam['id']) }}" method="POST" style="margin:0;">
+                                    <button type="submit" class="btn-action-sm" style="background:#059669; color:#fff; border-color:#059669;" title="Switch live AI detection to this camera">
+                                        <i class="fa-solid fa-bolt"></i> Set Active
+                                    </button>
+                                </form>
+                                <form action="{{ url_for('admin_delete_camera', cam_id=cam['id']) }}" method="POST" onsubmit="return confirm('Delete this camera from system?');" style="margin:0;">
+                                    <button type="submit" class="feed-btn danger" style="padding:4px 8px; font-size:11px;">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span style="font-size:11px; color:#34d399; font-weight:700;">
+                                    <i class="fa-solid fa-eye"></i> Currently Monitoring
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">
+                            No cameras registered. Click "Add New Camera" to register streams.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="camera-grid">
+
+    <!-- ACTIVE PRIMARY CAMERA CONFIGURATION -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-sliders"></i>
+                <span>Active Camera Stream Settings</span>
+            </div>
+            <span class="badge-pill" style="background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);">
+                {{ camera_id }} (Active)
+            </span>
+        </div>
+
+        <form id="cameraSettingsForm" onsubmit="saveCameraSettings(event)">
+            
+            <label class="form-label-admin">Select Stream Input Source</label>
+            <div class="source-options-grid">
+                {% if camera_mode == 'PC' %}
+                <label class="source-card active" onclick="selectSource('PC')">
+                    <input type="radio" name="camera_mode" value="PC" checked>
+                    <i class="fa-solid fa-laptop"></i>
+                    <h4>PC Webcam</h4>
+                    <p>Internal / USB Cam</p>
+                </label>
+                {% else %}
+                <label class="source-card" onclick="selectSource('PC')">
+                    <input type="radio" name="camera_mode" value="PC">
+                    <i class="fa-solid fa-laptop"></i>
+                    <h4>PC Webcam</h4>
+                    <p>Internal / USB Cam</p>
+                </label>
+                {% endif %}
+
+                {% if camera_mode == 'PHONE' %}
+                <label class="source-card active" onclick="selectSource('PHONE')">
+                    <input type="radio" name="camera_mode" value="PHONE" checked>
+                    <i class="fa-solid fa-mobile-screen"></i>
+                    <h4>IP / Phone</h4>
+                    <p>RTSP / HTTP Stream</p>
+                </label>
+                {% else %}
+                <label class="source-card" onclick="selectSource('PHONE')">
+                    <input type="radio" name="camera_mode" value="PHONE">
+                    <i class="fa-solid fa-mobile-screen"></i>
+                    <h4>IP / Phone</h4>
+                    <p>RTSP / HTTP Stream</p>
+                </label>
+                {% endif %}
+
+                {% if camera_mode == 'VIDEO' %}
+                <label class="source-card active" onclick="selectSource('VIDEO')">
+                    <input type="radio" name="camera_mode" value="VIDEO" checked>
+                    <i class="fa-solid fa-file-video"></i>
+                    <h4>Test Video</h4>
+                    <p>Video Clip Loop</p>
+                </label>
+                {% else %}
+                <label class="source-card" onclick="selectSource('VIDEO')">
+                    <input type="radio" name="camera_mode" value="VIDEO">
+                    <i class="fa-solid fa-file-video"></i>
+                    <h4>Test Video</h4>
+                    <p>Video Clip Loop</p>
+                </label>
+                {% endif %}
+            </div>
+
+            <!-- PHONE URL FIELD -->
+            {% if camera_mode != 'PHONE' %}
+            <div class="form-group-admin" id="phoneUrlGroup" style="display:none;">
+            {% else %}
+            <div class="form-group-admin" id="phoneUrlGroup">
+            {% endif %}
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <label class="form-label-admin" for="phoneUrl" style="margin-bottom:0;">Phone / IP Camera Stream URL</label>
+                    <button type="button" onclick="toggleHotspotGuide()" style="background:transparent; border:none; color:#38bdf8; font-size:12px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-circle-question"></i> Laptop Hotspot Guide
+                    </button>
+                </div>
+                <input 
+                    type="text" 
+                    id="phoneUrl" 
+                    name="phone_url" 
+                    class="form-input-admin" 
+                    placeholder="e.g. http://192.168.137.204:8080/video" 
+                    value="{{ phone_url }}"
+                >
+                <div style="display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap;">
+                    <button type="button" class="btn-action-sm" onclick="autoDetectPhoneCamera('phoneUrl', 'detectStatusMain')" id="btnAutoDetectMain" style="background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-size: 12px; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border:none; font-weight:600;">
+                        <i class="fa-solid fa-bolt"></i> Auto-Detect Phone (Laptop Hotspot)
+                    </button>
+                    <span style="font-size:11px; color:var(--text-muted);">
+                        Auto-scans Windows Laptop Hotspot (192.168.137.x) & Local Wi-Fi.
+                    </span>
+                </div>
+                <div id="detectStatusMain" style="font-size: 12px; margin-top: 6px;"></div>
+
+                <!-- LAPTOP HOTSPOT SETUP GUIDE BOX -->
+                <div id="hotspotGuideBox" style="display:none; background: #0f172a; border: 1px solid #3b82f6; border-radius: 10px; padding: 14px 16px; margin-top: 12px; font-size: 12px; color: #cbd5e1; line-height: 1.6;">
+                    <div style="font-weight: 700; color: #60a5fa; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; font-size:13px;">
+                        <i class="fa-solid fa-wifi"></i> Laptop Hotspot Setup Guide (Laptop me Internet + Phone Camera Connect):
+                    </div>
+                    <ol style="margin: 0; padding-left: 20px;">
+                        <li><b>Laptop Hotspot ON karein:</b> Laptop me <kbd style="background:#1e293b; padding:2px 6px; border-radius:4px; border:1px solid #475569;">Win + A</kbd> dabayein ya Settings &rarr; Network &rarr; <b>"Mobile Hotspot"</b> ko <b>ON</b> karein (Laptop Wi-Fi internet chalu rahega).</li>
+                        <li><b>Phone ko Laptop se jodein:</b> Mobile phone ka Wi-Fi kholein aur Laptop ke Hotspot Wi-Fi network se connect karein.</li>
+                        <li><b>IP Webcam start karein:</b> Phone me <b>IP Webcam</b> app kholein, sabse niche scroll karein aur <b>"Start server"</b> dabayein.</li>
+                        <li><b>Auto-Connect:</b> Yahan upar <b>"Auto-Detect Phone (Laptop Hotspot)"</b> button dabayein, ya phone par dikha IP (jaise <code>http://192.168.137.xxx:8080</code>) paste karke Save karein!</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin" for="cameraId">Camera Identifier</label>
+                <input type="text" id="cameraId" class="form-input-admin" value="{{ camera_id }}" readonly style="color:#94a3b8; background:#0f172a;">
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin" for="cameraLocation">Monitoring Location Name</label>
+                <input type="text" id="cameraLocation" name="location" class="form-input-admin" value="{{ camera_location }}">
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:24px;">
+                <button type="submit" class="btn-primary-action" style="flex:1;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save & Apply Stream
+                </button>
+                <button type="button" class="feed-btn danger" onclick="restartStream()">
+                    <i class="fa-solid fa-rotate-right"></i> Restart Stream
+                </button>
+            </div>
+            
+            <div id="saveFeedback" style="margin-top:14px; font-size:13px; text-align:center;"></div>
+        </form>
+    </div>
+
+    <!-- DUSTBIN RECEPTACLE CALIBRATOR -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <i class="fa-solid fa-trash-can"></i>
+                <span>Dustbin Zone Calibrator ({{ camera_id }})</span>
+            </div>
+            <span class="badge-pill" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3);">
+                Active Zone
+            </span>
+        </div>
+
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+            The system dynamically isolates legal dustbin receptacles (pedal buckets) using Color & Contour segmentation. You can also enforce predefined coordinate boundaries.
+        </p>
+
+        <div class="form-group-admin">
+            <label class="form-label-admin">Receptacle Detection Mode</label>
+            <select id="dustbinPresetSelect" class="form-input-admin" onchange="applyDustbinPreset(this.value)">
+                <option value="auto">Automatic Dual HSV (Red & Cyan Pedal Buckets)</option>
+                <option value="bottom_center">Manual Zone: Bottom-Center Area</option>
+                <option value="center_left">Manual Zone: Center-Left Area</option>
+                <option value="bottom_right">Manual Zone: Bottom-Right Area</option>
+                <option value="bottom_left">Manual Zone: Bottom-Left Area</option>
+                <option value="disabled">Disable Dustbin Zone (Strict No-Littering)</option>
+            </select>
+        </div>
+
+        <div class="calibrator-box">
+            <img src="{{ url_for('video_feed') }}" alt="Live Feed for Calibration" onclick="handleFeedClick(event)">
+            <div class="zone-info-badge" id="zoneBadge">
+                <i class="fa-solid fa-crosshairs"></i> Zone: {{ dustbin_zone_str }}
+            </div>
+        </div>
+
+        <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:12px; color:var(--text-muted);">
+                <i class="fa-solid fa-hand-pointer"></i> Click anywhere on the video preview above to lock the Dustbin Zone box onto that object!
+            </span>
+            <button class="btn-action-sm" onclick="applyDustbinPreset('auto')">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Reset to Auto
+            </button>
+        </div>
+    </div>
+
+</div>
+
+<!-- MODAL: ADD NEW CAMERA -->
+<div class="modal-overlay" id="addCameraModal">
+    <div class="modal-content-box">
+        <div class="modal-header">
+            <h3 style="color:#fff; font-size:16px; font-weight:700; display:flex; align-items:center; gap:8px;">
+                <i class="fa-solid fa-video" style="color:var(--primary);"></i> Add New Camera Stream
+            </h3>
+            <button onclick="closeAddCameraModal()" style="background:transparent; border:none; color:#94a3b8; font-size:18px; cursor:pointer;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="{{ url_for('admin_add_camera') }}" method="POST" style="padding: 22px;">
+            <div class="form-group-admin">
+                <label class="form-label-admin" for="modalCamId">Camera Identifier (Unique Code)</label>
+                <input type="text" id="modalCamId" name="camera_id" class="form-input-admin" placeholder="e.g. CAM-05" required>
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin" for="modalCamName">Friendly Name / Channel Tag</label>
+                <input type="text" id="modalCamName" name="name" class="form-input-admin" placeholder="e.g. 2nd Floor Library Entrance" required>
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin">Camera Source Type</label>
+                <select name="source_type" class="form-input-admin" id="modalSourceType" onchange="toggleModalUrlField(this.value)">
+                    <option value="RTSP">Network CCTV Camera (RTSP)</option>
+                    <option value="PHONE">Phone / IP Webcam App (HTTP Stream)</option>
+                    <option value="PC">USB / Laptop Webcam (Direct Device)</option>
+                    <option value="VIDEO">Local Video File (Loop)</option>
+                </select>
+            </div>
+
+            <div class="form-group-admin" id="modalStreamUrlGroup">
+                <label class="form-label-admin" for="modalStreamUrl">Stream / RTSP URL</label>
+                <input 
+                    type="text" 
+                    id="modalStreamUrl" 
+                    name="stream_url" 
+                    class="form-input-admin" 
+                    placeholder="e.g. rtsp://admin:12345@192.168.1.105:554/live or http://192.168.1.105:8080/video"
+                >
+                <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+                    <button type="button" class="btn-action-sm" onclick="autoDetectPhoneCamera('modalStreamUrl', 'modalDetectStatus')" id="btnAutoDetectModal" style="background:#059669; color:#fff; font-size:11px; padding:4px 10px; border-radius:5px; border:none; cursor:pointer;">
+                        <i class="fa-solid fa-bolt"></i> Auto-Detect Phone (Hotspot)
+                    </button>
+                    <span id="modalDetectStatus" style="font-size:11px;"></span>
+                </div>
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label-admin" for="modalLocation">Monitoring Location / Premises</label>
+                <input type="text" id="modalLocation" name="location" class="form-input-admin" placeholder="e.g. Library Main Lobby" required>
+            </div>
+
+            <div style="background:#1e293b; padding:12px 14px; border-radius:8px; border:1px solid #334155; margin-bottom:20px; display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" id="modalIsPrimary" name="is_primary" value="1" style="width:18px; height:18px;">
+                <label for="modalIsPrimary" style="color:#fff; font-size:13px; font-weight:600; cursor:pointer;">
+                    Immediately activate as primary AI detection stream
+                </label>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:12px;">
+                <button type="button" onclick="closeAddCameraModal()" class="feed-btn">Cancel</button>
+                <button type="submit" class="btn-primary-action">
+                    <i class="fa-solid fa-plus"></i> Register Camera
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function openAddCameraModal() {
+        document.getElementById("addCameraModal").style.display = "flex";
+    }
+
+    function closeAddCameraModal() {
+        document.getElementById("addCameraModal").style.display = "none";
+    }
+
+    function toggleModalUrlField(type) {
+        const urlGroup = document.getElementById("modalStreamUrlGroup");
+        if (type === "PC") {
+            urlGroup.style.display = "none";
+        } else {
+            urlGroup.style.display = "block";
+        }
+    }
+
+    function selectSource(mode) {
+        document.querySelectorAll(".source-card").forEach(c => c.classList.remove("active"));
+        const selected = document.querySelector(`input[name="camera_mode"][value="${mode}"]`);
+        if (selected) {
+            selected.checked = true;
+            selected.closest(".source-card").classList.add("active");
+        }
+        document.getElementById("phoneUrlGroup").style.display = (mode === "PHONE") ? "block" : "none";
+    }
+
+    function toggleHotspotGuide() {
+        const box = document.getElementById("hotspotGuideBox");
+        if (box) {
+            box.style.display = box.style.display === "none" ? "block" : "none";
+        }
+    }
+
+    async function autoDetectPhoneCamera(targetInputId, statusId) {
+        const targetInput = document.getElementById(targetInputId);
+        const statusEl = document.getElementById(statusId);
+        if (!statusEl) return;
+
+        statusEl.innerHTML = '<span style="color:#60a5fa;"><i class="fa-solid fa-satellite-dish fa-fade"></i> Scanning Laptop Hotspot (192.168.137.x) & Local Wi-Fi...</span>';
+
+        try {
+            const res = await fetch("/api/detect_phone_camera");
+            const data = await res.json();
+            if (data.success && data.found && data.devices && data.devices.length > 0) {
+                const dev = data.devices[0];
+                targetInput.value = dev.url;
+                statusEl.innerHTML = `<span style="color:#34d399; font-weight:600;"><i class="fa-solid fa-circle-check"></i> Found on ${dev.type}: ${dev.url}</span>`;
+                targetInput.style.borderColor = "#10b981";
+                targetInput.style.boxShadow = "0 0 10px rgba(16, 185, 129, 0.4)";
+            } else {
+                statusEl.innerHTML = '<span style="color:#f59e0b;"><i class="fa-solid fa-triangle-exclamation"></i> Camera not found. Ensure Laptop Hotspot is ON and tap \'Start server\' in phone IP Webcam.</span>';
+                const guide = document.getElementById("hotspotGuideBox");
+                if (guide) guide.style.display = "block";
+            }
+        } catch (err) {
+            statusEl.innerHTML = `<span style="color:#f87171;"><i class="fa-solid fa-circle-xmark"></i> Scan error: ${err}</span>`;
+        }
+    }
+
+    async function saveCameraSettings(e) {
+        e.preventDefault();
+        const mode = document.querySelector('input[name="camera_mode"]:checked').value;
+        let phoneUrl = document.getElementById("phoneUrl").value.trim();
+        // Automatically sanitize prefix in frontend
+        phoneUrl = phoneUrl.replace(/^(?:ipv[46]|ip|address)\s*:\s*/i, '').trim();
+
+        const feedback = document.getElementById("saveFeedback");
+
+        feedback.innerHTML = '<span style="color:#60a5fa;"><i class="fa-solid fa-spinner fa-spin"></i> Applying camera configuration...</span>';
+
+        try {
+            const res = await fetch("/api/camera_settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    camera_mode: mode,
+                    phone_url: phoneUrl
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                feedback.innerHTML = '<span style="color:#34d399;"><i class="fa-solid fa-check"></i> Camera updated successfully!</span>';
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                feedback.innerHTML = '<span style="color:#f87171;"><i class="fa-solid fa-xmark"></i> Failed to update camera.</span>';
+            }
+        } catch (err) {
+            feedback.innerHTML = `<span style="color:#f87171;"><i class="fa-solid fa-xmark"></i> Error: ${err}</span>`;
+        }
+    }
+
+    async function applyDustbinPreset(preset) {
+        const zoneBadge = document.getElementById("zoneBadge");
+        zoneBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Updating Zone...';
+
+        try {
+            const res = await fetch("/api/camera_settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    dustbin_position: preset
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                zoneBadge.innerHTML = `<i class="fa-solid fa-crosshairs"></i> Zone: ${JSON.stringify(data.dustbin_zone || 'AUTO')}`;
+            }
+        } catch (e) {
+            zoneBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error updating';
+        }
+    }
+
+    async function handleFeedClick(e) {
+        const img = e.target;
+        const rect = img.getBoundingClientRect();
+        const scaleX = 640 / rect.width;
+        const scaleY = 480 / rect.height;
+        const clickX = Math.round((e.clientX - rect.left) * scaleX);
+        const clickY = Math.round((e.clientY - rect.top) * scaleY);
+
+        const w = 180;
+        const h = 220;
+        const x1 = Math.max(0, clickX - Math.round(w / 2));
+        const y1 = Math.max(0, clickY - Math.round(h / 2));
+        const x2 = Math.min(640, x1 + w);
+        const y2 = Math.min(480, y1 + h);
+
+        const zoneBadge = document.getElementById("zoneBadge");
+        zoneBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Setting Zone to [${x1}, ${y1}, ${x2}, ${y2}]...`;
+
+        try {
+            const res = await fetch("/api/camera_settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    dustbin_coords: [x1, y1, x2, y2]
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                zoneBadge.innerHTML = `<i class="fa-solid fa-check"></i> Zone: [${x1}, ${y1}, ${x2}, ${y2}]`;
+            }
+        } catch (err) {
+            zoneBadge.innerHTML = `<i class="fa-solid fa-xmark"></i> Failed to set zone`;
+        }
+    }
+
+    async function restartStream() {
+        try {
+            await fetch("/stop_camera", { method: "POST" });
+            window.location.reload();
+        } catch (e) {
+            window.location.reload();
+        }
+    }
+</script>
+{% endblock %}
